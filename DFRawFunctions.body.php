@@ -901,6 +901,7 @@ class DFRawFunctions
 				if (!in_array('TILE',$option) and in_array("COLOR",$option))
 				$output[$i]=self::colorTile($parser, '', $shopsum['COLOR'][$option["building_stage"]]);
 			}
+			// BLOCK
 			if (in_array("BLOCK",$option))
 			{	
 				$block_tile=array(); $block_color=array();
@@ -931,6 +932,10 @@ class DFRawFunctions
 				}
 				$output[$i]=self::colorTile($parser, $block_tile, $block_color);
 			}
+			// !!!BUILD_ITEM
+			// !!!REACTION
+			// !!!BUILD_PROFESSION
+			
 			
 		}
 		echo "output=";print_r($output);
