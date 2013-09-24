@@ -933,53 +933,16 @@ class DFRawFunctions
 				$output[$i]=self::colorTile($parser, $block_tile, $block_color);
 			}
 			// !!!BUILD_ITEM
+			if (in_array("BUILD_ITEM",$option))
+			{	
 			// !!!REACTION
 			// !!!BUILD_PROFESSION
+			//
 			
 			
 		}
 		echo "output=";print_r($output);
-		
-		
-		### Return tile or colored tile
-		// if (in_array("TILE",$options) or in_array("COLOR",$options))
-		// {
-			// $tmp='';
-			// for ($j = 1; $j <= ($dim[1]-1); $j++) // Turn array into string.
-			// $tmp .= implode(":",$tile[$building_stage][$j])."<br/>";
-			// $tmp .= implode(":",$tile[$building_stage][$dim[1]]);
-			// $tile=$tmp;
-			
-			// if (in_array("COLOR",$options))
-			// {
-				// $tmp='';
-				// for ($j = 1; $j <= ($dim[1]-1); $j++) // Turn array into string.
-				// $tmp .= implode(":",$color[$building_stage][$j])."<br/>";
-				// $tmp .= implode(":",$color[$building_stage][$dim[1]]); //Prevents placing <br/> in last position
-				// $color=$tmp;
-				// if (in_array("TILESET",$options)){
 				
-				//Turned off colored tilesets 
-				//because of weird squares after saving the page
-				
-				//$tile_color=self::colorTile($parser, $tile, $color, //"[[File:Phoebus 16x16.png|link=]]", 16);
-				
-				// }else
-				// $tile_color=self::colorTile($parser, $tile, $color);
-				//echo '<br/>COLOR='. $color;
-			// }
-			
-			// if (!in_array("COLOR",$options))
-			// {
-				// if (in_array("TILESET",$options)){
-					// $tile_color=self::colorTile($parser, $tile, '', "[[File:Phoebus 16x16.png|link=]]", 16);
-				// }else
-					// $tile_color=self::colorTile($parser, $tile);
-			// }
-		
-		// if ($output===FALSE){$output=$tile_color;};
-		// }
-		
 		### Return items
 		// if (in_array("BUILD_ITEM",$options) and $item[$j]!='')
 		// {	
@@ -1016,6 +979,18 @@ class DFRawFunctions
 	// ###### Returns item parameters based on whatever.
 	public static function getItem (&$parser, $item = '', $single_tag='', $options = '')
 	{	
+		// string input support
+		if (is_string($item))
+			$string_input=true;
+		if ($string_input)
+		{
+			$input[0]['ITEM']=multiexplode(array(';',':'),$item);
+			$input[0]['SINGLE_TAG']=multiexplode(array(';',':'),$single_tag);
+			$tmp=multiexplode(array(';',':'),$options);
+			unset($options);
+			$options[0]=$tmp;
+		}
+		
 		// Transform input into 2D array; 5+ elements are from single_tag
 		// echo $item." ".$single_tag;
 		$item=explode('<br/>',$item); 
@@ -1027,77 +1002,78 @@ class DFRawFunctions
 		$item[$i]=explode(":",$item[$i]);}
 		$tag=array();
 		$tmp='';
-		if ($options=="BUILD_ITEM")
-		{
-			for ($i = 0; $i <= (count($item)-1); $i++){
-				foreach ($item[$i] as &$tag)
-				if ($tag==="NONE")
-				$tag='';
-				if (isset($item[$i][5])){
-				$tmp.="<b>";
-					for ($j = 5; $j <= (count($item[$i])-1); $j++){
-						switch ($item[$i][$j]){
-							case 'FIRE_BUILD_SAFE':
-							$tmp.='{{abbr|F|fire build safe|0}}';
-							break;
-							case 'MAGMA_BUILD_SAFE':
-							$tmp.='M';
-							break;
-							case 'CAN_USE_ARTIFACT':
-							$tmp.='A';
-							break;	
-							case 'WORTHLESS_STONE_ONLY':
-							$tmp.='W';
-							break;
-							case 'BUILDMAT':
-							$tmp.='B';
-							break;
-							default:
-							'<span class="error">Define '.$item[$i][$j].' </span>';
-							
+		foreach ($input as $shop=>$shopinput)
+			if ($options=="BUILD_ITEM")
+			{	
+				foreach ($shopinput as $i=>$item_row)
+				{
+					foreach ($item_row as $j=>$tag)
+					{
+						if (isset($item[$i][5])){
+							$tmp.="<b>";
+						for ($j = 5; $j <= (count($item[$i])-1); $j++){
+							switch ($item[$i][$j]){
+								case 'FIRE_BUILD_SAFE':
+								$tmp.='{{abbr|F|fire build safe|0}}';
+								break;
+								case 'MAGMA_BUILD_SAFE':
+								$tmp.='M';
+								break;
+								case 'CAN_USE_ARTIFACT':
+								$tmp.='A';
+								break;	
+								case 'WORTHLESS_STONE_ONLY':
+								$tmp.='W';
+								break;
+								case 'BUILDMAT':
+								$tmp.='B';
+								break;
+								default:
+								'<span class="error">Define '.$item[$i][$j].' </span>';
+								
+							}
 						}
+					$tmp.="</b> ";
 					}
-				$tmp.="</b> ";
+					
+					$tmp.=$item[$i][0]." ";
+					switch ($item[$i][1]){
+					case "BAR":			$tmp.=strtolower($item[$i][3].' '.$item[i][1]);break;
+					case "SKIN_TANNED":	$tmp.="leather";					break;
+					case "TOOL":		
+					$tmp.=self::getType($parser, "Masterwork:item_tool_masterwork.txt", "ITEM_TOOL","ITEM_TOOL".":".$item[$i][2], "NAME", "FIRST_ONLY");								  break;
+					case "ANVIL":		$tmp.=strtolower($item[$i][1]);		break;
+					case "BLOCKS":		$tmp.=strtolower($item[$i][1]);		break;
+					case "TRAPPARTS":	$tmp.="mechanism";					break;
+					case "WOOD":		$tmp.=strtolower($item[$i][4]." ".$item[$i][1]);break;
+					case "CHAIR":		$tmp.=strtolower($item[$i][1]);		break;
+					case "CHAIN":		$tmp.=strtolower($item[$i][1]);		break;
+					case "TOY":	
+					
+					$tmp.=self::getType($parser, "Masterwork:item_toy_Masterwork.txt", "ITEM_TOY","ITEM_TOY".":".$item[$i][2], "NAME", "FIRST_ONLY").self::getType($parser, "Masterwork:item_tool.txt", "ITEM_TOY","ITEM_TOY".":".$item[$i][2], "NAME", "FIRST_ONLY");
+																			break;
+					case "GRATE":		$tmp.=strtolower($item[$i][1]);		break;
+					case "CAGE":		$tmp.=strtolower($item[$i][1]);		break;
+					case "PIPE_SECTION":$tmp.="pipe section";				break;
+					case "QUERN":		$tmp.=strtolower($item[$i][1]);		break;
+					case "BALLISTAPARTS":$tmp.="ballista parts";			break;
+					case "CATAPULTPARTS":$tmp.="catapult parts";			break;
+					case "WEAPON":
+					if ($item[$i][2]=="ITEM_WEAPON_CROSSBOW"){$tmp.="crossbow";}
+																			break;
+					
+					
+					default:
+					if ($tmp!=''){
+					$tmp.='<span class="error">Define '.$item[$i][1].' </span>'; echo $tmp;
+					}
+					}
+					
+					if ($i!=(count($item)-1)){$tmp.=", ";}
 				}
-				
-				$tmp.=$item[$i][0]." ";
-				switch ($item[$i][1]){
-				case "BAR":			$tmp.=strtolower($item[$i][3].' '.$item[i][1]);break;
-				case "SKIN_TANNED":	$tmp.="leather";					break;
-				case "TOOL":		
-				$tmp.=self::getType($parser, "Masterwork:item_tool_masterwork.txt", "ITEM_TOOL","ITEM_TOOL".":".$item[$i][2], "NAME", "FIRST_ONLY");								  break;
-				case "ANVIL":		$tmp.=strtolower($item[$i][1]);		break;
-				case "BLOCKS":		$tmp.=strtolower($item[$i][1]);		break;
-				case "TRAPPARTS":	$tmp.="mechanism";					break;
-				case "WOOD":		$tmp.=strtolower($item[$i][4]." ".$item[$i][1]);break;
-				case "CHAIR":		$tmp.=strtolower($item[$i][1]);		break;
-				case "CHAIN":		$tmp.=strtolower($item[$i][1]);		break;
-				case "TOY":	
-				
-				$tmp.=self::getType($parser, "Masterwork:item_toy_Masterwork.txt", "ITEM_TOY","ITEM_TOY".":".$item[$i][2], "NAME", "FIRST_ONLY").self::getType($parser, "Masterwork:item_tool.txt", "ITEM_TOY","ITEM_TOY".":".$item[$i][2], "NAME", "FIRST_ONLY");
-																		break;
-				case "GRATE":		$tmp.=strtolower($item[$i][1]);		break;
-				case "CAGE":		$tmp.=strtolower($item[$i][1]);		break;
-				case "PIPE_SECTION":$tmp.="pipe section";				break;
-				case "QUERN":		$tmp.=strtolower($item[$i][1]);		break;
-				case "BALLISTAPARTS":$tmp.="ballista parts";			break;
-				case "CATAPULTPARTS":$tmp.="catapult parts";			break;
-				case "WEAPON":
-				if ($item[$i][2]=="ITEM_WEAPON_CROSSBOW"){$tmp.="crossbow";}
-																		break;
-				
-				
-				default:
-				if ($tmp!=''){
-				$tmp.='<span class="error">Define '.$item[$i][1].' </span>'; echo $tmp;
-				}
-				}
-				
-				if ($i!=(count($item)-1)){$tmp.=", ";}
+				return $tmp;
 			}
-			return $tmp;
-		}
-		// 'REACTION_CLASS;X', 'HAS_MATERIAL_REACTION_PRODUCT;X', 'UNROTTEN', 'CONTAINS_LYE', 'POTASHABLE', 'NOT_WEB', 'WEB_ONLY', 'EMPTY', 'NOT_CONTAIN_BARREL_ITEM', 'BAG', 'GLASS_MATERIAL', 'BUILDMAT', 'FIRE_BUILD_SAFE', 'MAGMA_BUILD_SAFE', 'CAN_USE_ARTIFACT', 'WORTHLESS_STONE_ONLY', 'ANY_PLANT_MATERIAL', 'ANY_SILK_MATERIAL', 'ANY_YARN_MATERIAL', 'ANY_SOAP_MATERIAL', 'ANY_LEATHER_MATERIAL', 'ANY_BONE_MATERIAL', 'ANY_STRAND_TISSUE', 'ANY_SHELL_MATERIAL', 'ANY_TOOTH_MATERIAL', 'ANY_HORN_MATERIAL', 'ANY_PEARL_MATERIAL', 'USE_BODY_COMPONENT', 'NO_EDGE_ALLOWED', 'NOT_ENGRAVED', 'METAL_ORE;X', 'MIN_DIMENSION;X', 'HAS_TOOL_USE;X';
+			// 'REACTION_CLASS;X', 'HAS_MATERIAL_REACTION_PRODUCT;X', 'UNROTTEN', 'CONTAINS_LYE', 'POTASHABLE', 'NOT_WEB', 'WEB_ONLY', 'EMPTY', 'NOT_CONTAIN_BARREL_ITEM', 'BAG', 'GLASS_MATERIAL', 'BUILDMAT', 'FIRE_BUILD_SAFE', 'MAGMA_BUILD_SAFE', 'CAN_USE_ARTIFACT', 'WORTHLESS_STONE_ONLY', 'ANY_PLANT_MATERIAL', 'ANY_SILK_MATERIAL', 'ANY_YARN_MATERIAL', 'ANY_SOAP_MATERIAL', 'ANY_LEATHER_MATERIAL', 'ANY_BONE_MATERIAL', 'ANY_STRAND_TISSUE', 'ANY_SHELL_MATERIAL', 'ANY_TOOTH_MATERIAL', 'ANY_HORN_MATERIAL', 'ANY_PEARL_MATERIAL', 'USE_BODY_COMPONENT', 'NO_EDGE_ALLOWED', 'NOT_ENGRAVED', 'METAL_ORE;X', 'MIN_DIMENSION;X', 'HAS_TOOL_USE;X';
 	}
 	
 	
@@ -1120,10 +1096,9 @@ class DFRawFunctions
 			
 			// string input support
 			if ($tile!=='' and $string_input)
-			{	$tile_tmp=explode(';',$tile);
+			{	
+				$tile_tmp=multiexplode(array(';',':'),$tile);
 				unset($tile);
-				foreach ($tile_tmp as &$tile_row)
-				$tile_row=explode(':',$tile_row);
 				$tile[0]=$tile_tmp;
 			}
 			$shops=count($tile);
@@ -1266,6 +1241,164 @@ class DFRawFunctions
 		$string=str_replace($words['corrupted'], $words['fixed'], $string);
 		return $string;
 	}
+	
+	// Fix corrupted masterwork raws
+	public static function getToken($input)
+	{
+		// string support
+		if (is_string($input))
+			$string_input = true;
+		if ($string_input)
+		{
+		$tmp=self:multiexplode(array(';',':',','),$input);
+		unset($input);
+		$input[0]=$tmp;
+		} 
+		// $input -> $shop -> $row -> $tags_for_item -> REACTION_CLASS:X
+		foreach ($input as $shop=>$shopinput)
+			foreach ($shop as $i=>$row)
+			{
+				$tmp='';
+				foreach ($row as $j=>$item)
+				{
+					foreach ($item as $token)
+					{
+						switch $token[0]
+						{
+							case "REACTION_CLASS":
+								$tmp="Reagent material must have ".$item[1]. "  reaction class.";
+							break;
+							case "HAS_MATERIAL_REACTION_PRODUCT":
+								$tmp="Reagent material must have ".$item[1]. " material reaction product.";
+							break;
+							case "CONTAINS":
+								$tmp="Reagent is a container that holds the ".$item[1]. ".";
+							break;
+							case "UNROTTEN":
+								$tmp="Reagent must not be rotten, mainly for organic materials.";
+							break;
+							case "CONTAINS_LYE":
+								$tmp="Reagent must be a BARREL or TOOL which contains at least one item of type LIQUID_MISC made of LYE. Use of this token is discouraged, as it does not work with buckets (instead, use [CONTAINS:lye] ? note the colon ? and a corresponding lye reagent [REAGENT:lye:150:LIQUID_MISC:NONE:LYE]).";
+							break;
+							case "POTASHABLE":
+								$tmp="Alias for [CONTAINS_LYE].";
+							break;
+							case "NOT_WEB":
+								$tmp="Reagent must be collected (to distinguish silk thread from webs). Only makes sense for items of type THREAD.";
+							break;
+							case "WEB_ONLY":
+								$tmp="Reagent must be undisturbed (to distinguish silk thread from webs). Only makes sense for items of type THREAD.";
+							break;
+							case "EMPTY":
+								$tmp="If the reagent is a container, it must be empty.";
+							break;
+							case "NOT_CONTAIN_BARREL_ITEM":
+								$tmp="If the reagent is a container, it must not contain lye or milk. Not necessary if specifying [EMPTY].";
+							break;
+							case "BAG":
+								$tmp="Reagent must be a bag - that is, a BOX made of plant fiber, silk, yarn, or leather.";
+							break;
+							case "GLASS_MATERIAL":
+								$tmp="Reagent material must have the [IS_GLASS] token. All 3 types of glass have this token hardcoded.";
+							break;
+							case "BUILDMAT":
+								$tmp="Reagent must be a general building material - BAR, BLOCKS, BOULDER, or WOOD.";
+							break;
+							case "FIRE_BUILD_SAFE":
+								$tmp="Reagent material must be stable at temperatures approaching 11000. Only works with items of type BAR, BLOCKS, BOULDER, WOOD, and ANVIL - all others are considered unsafe.";
+							break;
+							case "MAGMA_BUILD_SAFE":
+								$tmp="Reagent material must be stable at temperatures approaching 12000. Only works with items of type BAR, BLOCKS, BOULDER, WOOD, and ANVIL - all others are considered unsafe.";
+							break;
+							case "CAN_USE_ARTIFACT":
+								$tmp="Reagent can be an Artifact. Using [PRESERVE_REAGENT] with this is strongly advised.";
+							break;
+							case "WORTHLESS_STONE_ONLY":
+								$tmp="Reagent material must be non-economic.";
+							break;
+							case "ANY_PLANT_MATERIAL":
+								$tmp="Reagent material must be subordinate to a PLANT object.";
+							break;
+							case "ANY_SILK_MATERIAL":
+								$tmp="Reagent material must have the [SILK] token.";
+							break;
+							case "ANY_YARN_MATERIAL":
+								$tmp="Reagent material must have the [YARN] token.";
+							break;
+							case "ANY_SOAP_MATERIAL":
+								$tmp="Reagent material must have the [SOAP] token.";
+							break;
+							case "ANY_LEATHER_MATERIAL":
+								$tmp="Reagent material must have the [LEATHER] token.";
+							break;
+							case "ANY_BONE_MATERIAL":
+								$tmp="Reagent material must have the [BONE] token.";
+							break;
+							case "ANY_STRAND_TISSUE":
+								$tmp="Reagent is made of a tissue having [TISSUE_SHAPE:STRANDS], intended for matching hair and wool. Must be used with [USE_BODY_COMPONENT].";
+							break;
+							case "ANY_SHELL_MATERIAL":
+								$tmp="Reagent material must have the [SHELL] token.";
+							break;
+							case "ANY_TOOTH_MATERIAL":
+								$tmp="Reagent material must have the [TOOTH] token.";
+							break;
+							case "ANY_HORN_MATERIAL":
+								$tmp="Reagent material must have the [HORN] token.";
+							break;
+							case "ANY_PEARL_MATERIAL":
+								$tmp="Reagent material must have the [PEARL] token.";
+							break;
+							case "USE_BODY_COMPONENT":
+								$tmp="Reagent must be a body part (CORPSE or CORPSEPIECE).";
+							break;
+							case "NO_EDGE_ALLOWED":
+								$tmp="Reagent must not have an edge - excludes sharp stones (produced using knapping) and most types of weapon/ammo.";
+							break;
+							case "NOT_ENGRAVED":
+								$tmp="Reagent has not been engraved (excludes memorial slabs).";
+							break;
+							case "NOT_IMPROVED":
+								$tmp="Reagent has not been decorated.";
+							break;
+							case "DOES_NOT_ABSORB":
+								$tmp="Reagent material must have [ABSORPTION:0]";
+							break;
+							case "FOOD_STORAGE_CONTAINER":
+								$tmp="Reagent is either a BARREL or a TOOL with the FOOD_STORAGE use.";
+							break;
+							case "HARD_ITEM_MATERIAL":
+								$tmp="Reagent material must have [ITEMS_HARD].";
+							break;
+							case "NOT_PRESSED":
+								$tmp="Reagent must not be in the SOLID_PRESSED state.";
+							break;
+							case "METAL_ORE:X":
+								$tmp="Reagent material must be an ore of the specified metal.";
+							break;
+							case "MIN_DIMENSION:X":
+								$tmp="Reagent's item dimension must be at least this large. The reagent's item type must be BAR, POWDER_MISC, LIQUID_MISC, DRINK, THREAD, or CLOTH for this to work.";
+							break;
+							case "HAS_TOOL_USE:X":
+								$tmp="Reagent must be a tool with the specific TOOL_USE value. The reagent's item type must be TOOL:NONE for this to make any sense.";
+							break;
+							case "PRESERVE_REAGENT":
+								$tmp="Reagent is not destroyed, which is the normal effect, at the completion of the reaction. Typically used for containers.";
+							break;
+							case "DOES_NOT_DETERMINE_PRODUCT_AMOUNT":
+								$tmp="Reagent quantity is ignored for the purposes of producing extra outputs. Typically used for containers so that stacks of reagents will correctly produce additional outputs.";
+							break;
+							}		
+						$tmp='{{abbr|'. $token[0][0] .'|'. $tmp .'|0}}'
+					}
+					$tmp.=$tmp;
+				}
+				$output[$shop][$i][$j]=$tmp;
+			}
+			
+		print_r($output);
+	}
+	
 }
 
 /* {{#df_tile:43:222:219:221<br/>
