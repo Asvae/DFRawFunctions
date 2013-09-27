@@ -1020,21 +1020,29 @@ class DFRawFunctions
 				if ($input['SINGLE_TAG'][$shop][$line]!=='')
 					$tmp=$input['SINGLE_TAG'][$shop][$line].' ';
 				$tmp.=$input_line[0].' ';
+				$branch_params=explode(', ','TOOL, FOOD, TRAPCOMP, SIEGEAMMO, PANTS,	AMMO, GLOVES, HELM, SHIELD, SHOES, ARMOR, WEAPON, TOY, INSTRUMENT')
+				if (in_array($input_line[1]),$branch_params)
+					$branch[$shop][$line]=$input_line;
+				
 				switch ($input_line[1])
 				{
 					case "BAR":			$tmp.=strtolower($input_line[3].' '.$input_line[1]);break;
 					case "SKIN_TANNED":	$tmp.="leather";					break;
-					case "TOOL":	//!!! should be redone to support arrays	
-					$tmp.=self::getType($parser, "Masterwork:item_tool_masterwork.txt", "ITEM_TOOL","ITEM_TOOL".":".$input_line[2], "NAME", "FIRST_ONLY");		
+					//case "TOOL":		
+					//$tmp.=self::getType($parser, "Masterwork:item_tool_masterwork.txt", "ITEM_TOOL","ITEM_TOOL".":".$input_line[2], "NAME", "FIRST_ONLY");		
 						break;
 					case "ANVIL":
 					case "BLOCKS":
-					case "BED":		$tmp.=strtolower($input_line[1]);
+					case "BED":		
+					case "CHAIR":
+					case "CHAIN":
+					
+					$tmp.=strtolower($input_line[1]);
 						break;
 					case "TRAPPARTS":	$tmp.="mechanism";					break;
 					case "WOOD":		$tmp.=strtolower($input_line[4]." ".$input_line[1]);break;
-					case "CHAIR":		$tmp.=strtolower($input_line[1]);		break;
-					case "CHAIN":		$tmp.=strtolower($input_line[1]);		break;
+							$tmp.=strtolower($input_line[1]);		break;
+							$tmp.=strtolower($input_line[1]);		break;
 					case "TOY":	
 					// !!! that line as well
 					$tmp.=self::getType($parser, "Masterwork:item_toy_Masterwork.txt", "ITEM_TOY","ITEM_TOY".":".$item[$i][2], "NAME", "FIRST_ONLY").self::getType($parser, "Masterwork:item_tool.txt", "ITEM_TOY","ITEM_TOY".":".$item[$i][2], "NAME", "FIRST_ONLY");
