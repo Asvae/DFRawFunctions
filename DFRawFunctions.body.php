@@ -991,6 +991,9 @@ class DFRawFunctions
 		*/
 	public static function getItem (&$parser, $item = '', $single_tag='', $options = '')
 	{	
+		// Simple items don't have personal files (taken from dwarffortresswiki.org/index.php/DF2012:Item_token)
+		$simple_item=array('BAR','SMALLGEM'=>'cut gem','BLOCKS','ROUGH'=>'rough gem','BOULDER','WOOD'=>	'log','DOOR','FLOODGATE','BED','CHAIR','CHAIN','FLASK','GOBLET','WINDOW','CAGE','BARREL','BUCKET','ANIMALTRAP'=>'animal trap','TABLE','COFFIN','STATUE','CORPSE','BOX','BIN','ARMORSTAND','WEAPONRACK'=>'weapon rack','CABINET','FIGURINE','AMULET','SCEPTER','CROWN','RING','EARRING','BRACELET','GEM','ANVIL','CORPSEPIECE'=>'body part','REMAINS'=>'vermin remains','MEAT','FISH','FISH_RAW'=>'raw fish','VERMIN'=>'live vermin','PET'=>'tame vermin','SEEDS','PLANT','SKIN_TANNED'=>'leather','LEAVES','THREAD','CLOTH','TOTEM','PANTS','BACKPACK','QUIVER','CATAPULTPARTS'=>'catapult part','BALLISTAPARTS'=>'ballista parts','SIEGEAMMO'=>'siege ammo','BALLISTAARROWHEAD'=>'ballista arrow head','TRAPPARTS'=>'mechanism','DRINK','POWDER_MISC'=>'powder','CHEESE','LIQUID_MISC'=>'liquid','COIN','GLOB'=>'tallow','ROCK'=>'small rock','PIPE_SECTION'=>'pipe section','HATCH_COVER'=>'hatch cover','GRATE','QUERN','MILLSTONE','SPLINT','CRUTCH','TRACTION_BENCH'=>'traction bench','ORTHOPEDIC_CAST'=>'orthopedic cast','SLAB','EGG','BOOK');
+		
 		// string input support
 		$string_input = false;
 		if (is_string($item))
@@ -1031,21 +1034,31 @@ class DFRawFunctions
 					//case "TOOL":		
 					//$tmp.=self::getType($parser, "Masterwork:item_tool_masterwork.txt", "ITEM_TOOL","ITEM_TOOL".":".$input_line[2], "NAME", "FIRST_ONLY");		
 						break;
-					case "ANVIL":
-					case "BLOCKS":
-					case "BED":		
-					case "CHAIR":
-					case "CHAIN":
+								break;
+								case 'BUILDMAT':
+								$tmp.='B';
+								break;
 					
-					$tmp.=strtolower($input_line[1]);
-						break;
+					if(in_array($input_line[1],array_keys($simple_item)))
+						if (isset($simple_item[$input_line[1]]))
+						{
+							$tmp.=$simple_item[$input_line[1]];
+						}
+						else
+							$tmp.=strtolower($input_line[1]);
+							
+							
+					switch ($input_line[1]){
+					
+					
+					
+					
+					
+					case "TOOL":		
+					$tmp.=self::getType($parser, "Masterwork:item_tool_masterwork.txt", "ITEM_TOOL","ITEM_TOOL".":".$input_line[2], "NAME", "FIRST_ONLY");								  break;
 					case "TRAPPARTS":	$tmp.="mechanism";					break;
-					case "WOOD":		$tmp.=strtolower($input_line[4]." ".$input_line[1]);break;
-							$tmp.=strtolower($input_line[1]);		break;
-							$tmp.=strtolower($input_line[1]);		break;
 					case "TOY":	
-					// !!! that line as well
-					$tmp.=self::getType($parser, "Masterwork:item_toy_Masterwork.txt", "ITEM_TOY","ITEM_TOY".":".$item[$i][2], "NAME", "FIRST_ONLY").self::getType($parser, "Masterwork:item_tool.txt", "ITEM_TOY","ITEM_TOY".":".$item[$i][2], "NAME", "FIRST_ONLY");
+					$tmp.=self::getType($parser, "Masterwork:item_toy_Masterwork.txt", "ITEM_TOY","ITEM_TOY".":".$input_line[2], "NAME", "FIRST_ONLY").self::getType($parser, "Masterwork:item_tool.txt", "ITEM_TOY","ITEM_TOY".":".$item[$i][2], "NAME", "FIRST_ONLY");
 																			break;
 					case "GRATE":		$tmp.=strtolower($input_line[1]);		break;
 					case "CAGE":		$tmp.=strtolower($input_line[1]);		break;
@@ -1056,7 +1069,6 @@ class DFRawFunctions
 					case "WEAPON":
 						if ($input_line[2]=="ITEM_WEAPON_CROSSBOW"){$tmp.="crossbow";}
 																			break;
-					case "TRAPCOMP"
 					
 					
 					default:
@@ -1074,6 +1086,18 @@ class DFRawFunctions
 				$output[$shop]=implode('<br/>',$output[$shop]);
 		}
 		print_r($output);
+		/* Non simple items
+	INSTRUMENT	item_instrument.txt
+	TOY	item_toy.txt
+	WEAPON	item_weapon.txt
+	ARMOR	item_armor.txt
+	SHOES	item_shoes.txt
+	SHIELD	item_shield.txt
+	HELM	item_helm.txt
+	GLOVES	item_gloves.txt
+	AMMO	item_ammo.txt
+	TRAPCOMP	item_trapcomp.txt
+	*/
 		
 		//String input check
 		if ($string_input)
