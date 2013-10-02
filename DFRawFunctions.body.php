@@ -1023,59 +1023,30 @@ class DFRawFunctions
 				if ($input['SINGLE_TAG'][$shop][$line]!=='')
 					$tmp=$input['SINGLE_TAG'][$shop][$line].' ';
 				$tmp.=$input_line[0].' ';
-				$branch_params=explode(', ','TOOL, FOOD, TRAPCOMP, SIEGEAMMO, PANTS,	AMMO, GLOVES, HELM, SHIELD, SHOES, ARMOR, WEAPON, TOY, INSTRUMENT')
-				if (in_array($input_line[1]),$branch_params)
+				$branch_params=explode(', ','TOOL, FOOD, TRAPCOMP, SIEGEAMMO, PANTS,	AMMO, GLOVES, HELM, SHIELD, SHOES, ARMOR, WEAPON, TOY, INSTRUMENT');
+				if (in_array($input_line[1],$branch_params))
 					$branch[$shop][$line]=$input_line;
 				
 				switch ($input_line[1])
-				{
-					case "BAR":			$tmp.=strtolower($input_line[3].' '.$input_line[1]);break;
-					case "SKIN_TANNED":	$tmp.="leather";					break;
-					//case "TOOL":		
-					//$tmp.=self::getType($parser, "Masterwork:item_tool_masterwork.txt", "ITEM_TOOL","ITEM_TOOL".":".$input_line[2], "NAME", "FIRST_ONLY");		
-						break;
-								break;
-								case 'BUILDMAT':
-								$tmp.='B';
-								break;
-					
-					if(in_array($input_line[1],array_keys($simple_item)))
+				{					
+					if (in_array($input_line[1],array_keys($simple_item)))
+					{	
 						if (isset($simple_item[$input_line[1]]))
 						{
 							$tmp.=$simple_item[$input_line[1]];
 						}
 						else
 							$tmp.=strtolower($input_line[1]);
-							
-							
-					switch ($input_line[1]){
-					
-					
-					
-					
-					
-					case "TOOL":		
-					$tmp.=self::getType($parser, "Masterwork:item_tool_masterwork.txt", "ITEM_TOOL","ITEM_TOOL".":".$input_line[2], "NAME", "FIRST_ONLY");								  break;
-					case "TRAPPARTS":	$tmp.="mechanism";					break;
-					case "TOY":	
-					$tmp.=self::getType($parser, "Masterwork:item_toy_Masterwork.txt", "ITEM_TOY","ITEM_TOY".":".$input_line[2], "NAME", "FIRST_ONLY").self::getType($parser, "Masterwork:item_tool.txt", "ITEM_TOY","ITEM_TOY".":".$item[$i][2], "NAME", "FIRST_ONLY");
-																			break;
-					case "GRATE":		$tmp.=strtolower($input_line[1]);		break;
-					case "CAGE":		$tmp.=strtolower($input_line[1]);		break;
-					case "PIPE_SECTION":$tmp.="pipe section";				break;
-					case "QUERN":		$tmp.=strtolower($input_line[1]);		break;
-					case "BALLISTAPARTS":$tmp.="ballista parts";			break;
-					case "CATAPULTPARTS":$tmp.="catapult parts";			break;
-					case "WEAPON":
-						if ($input_line[2]=="ITEM_WEAPON_CROSSBOW"){$tmp.="crossbow";}
-																			break;
-					
-					
-					default:
+					} 
+					else
 						if ($tmp!='')
 						{
-							$tmp.='<span class="error">Unindentified item '.$input_line[1].'. </span>';
+							$tmp.='<span class="error">Unidentified item '.$input_line[1].'. </span>';
 						}
+					//case "TOOL":		
+					//$tmp.=self::getType($parser, "Masterwork:item_tool_masterwork.txt", "ITEM_TOOL","ITEM_TOOL".":".$input_line[2], "NAME", "FIRST_ONLY");  break;
+					//case "TOY":	
+					//$tmp.=self::getType($parser, "Masterwork:item_toy_Masterwork.txt", "ITEM_TOY","ITEM_TOY".":".$input_line[2], "NAME", "FIRST_ONLY").self::getType($parser, "Masterwork:item_tool.txt", "ITEM_TOY","ITEM_TOY".":".$item[$i][2], "NAME", "FIRST_ONLY");
 				}
 				
 				$output[$shop][$line]=$tmp;
@@ -1108,6 +1079,7 @@ class DFRawFunctions
 			return array( $output, 'nowiki' => true );
 			
 		return $output;
+		}
 	}
 	
 	
