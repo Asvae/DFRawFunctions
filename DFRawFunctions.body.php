@@ -1,12 +1,14 @@
-<?php
+﻿<?php
 
 ini_set('display_errors', 'On');
 error_reporting(E_ALL);
-$wgStringInput=false;
-$wgNoWiki=false;
+$wgStringInput = false;
+$wgNoWiki = false;
+$wgRawPath = array();
 
 class DFRawFunctions
 {
+	
    /**
 	*	Takes some raws and returns a 2-dimensional token array
 	*   If 2nd parameter is specified, then only tags of the specified type will be returned
@@ -726,27 +728,31 @@ class DFRawFunctions
 	
 	
 	// Makes "Alt+Ctrl+S" from "CUSTOM_SHIFT_ALT_CTRL_S".
-	public static function getKeybind (&$parser, $text='', $replace="$1", $join='-') {
-		$keys = explode("_", $text);
-		$tmp = $keys[count($keys)-1];
-		$keys[count($keys)-1] = 'CUSTOM';
-		$invalid = array_diff($keys, array("CUSTOM", "ALT", "SHIFT", "CTRL", "NONE"));
+	public static function getKeybind (&$parser, $input=array())
+	{
+		if (!isset($input['replace'])) $input['replace']="$1";
+		if (!isset($input['join'])) $input['join']='-';
+		
+		$key = explode("_", $input['key']);
+		$tmp = $key[count($key)-1];
+		$key[count($key)-1] = 'CUSTOM';
+		$invalid = array_diff($key, array("CUSTOM", "ALT", "SHIFT", "CTRL", "NONE"));
 		if ($invalid != FALSE){
 			$invalid = implode(', ', $invalid);
 			return "<span class=\"error\">Unrecognized keybinding values: $invalid</span>";
 		}
-		if (in_array("NONE", $keys))
+		if (in_array("NONE", $key))
 			return '';
-		if (in_array("SHIFT", $keys) === FALSE)
+		if (in_array("SHIFT", $key) === FALSE)
 			$tmp=(strtolower($tmp));
-		if (in_array("ALT", $keys))
+		if (in_array("ALT", $key))
 			$tmp="Alt-{$tmp}";
-		if (in_array("CTRL", $keys))
+		if (in_array("CTRL", $key))
 			$tmp="Ctrl-{$tmp}";
 		$parts = explode('-', $tmp);
 		foreach ($parts as &$part) 
-			$part = preg_replace('/(.+)/', $replace, $part);
-		$tmp = implode($join, $parts);
+			$part = preg_replace('/(.+)/', $input['replace'], $part);
+		$tmp = implode($input['join'], $parts);
 		return $tmp;
 	}
 	
@@ -1415,9 +1421,49 @@ class DFRawFunctions
 		return($output);
 	}
 	
+	public static function dfMain (&$parser, $type = ''/*, ...*/)
+	{
+		global $wgNoWiki;
+		
+		// Easters and type check
+		$valid_type = explode(', ','key, building'); //#### Valid type
+		if ($type === '') return '<span class="error">The df function has no telepathic abilities. Feed it gently with parameters of your choice.</span>';
+		if (!in_array($type,$valid_type)) return '<span class="error">The df function has no such a functionality. Choose supported type instead of $type.</span>';
+		
+			
+		// Convert all parameters into one array - $input
+		$valid_params = explode(', ','options, building, main, key, nowiki'); //#### Valid parameters
+		for ($i = 2; $i <= func_num_args()-1; $i++)
+		{
+			$params[$i-2] = preg_replace("|\n|", '', func_get_arg($i));
+			$params[$i-2] = explode('=',$params[$i-2]);
+			if (!(count($params[$i-2]) === 2)) return '<span class="error">Either "=" is missing or too much of them.</span>';
+			if (in_array($params[$i-2][0],$valid_params))
+				$input[$params[$i-2][0]] = $params[$i-2][1];
+			else
+				return '<span class="error">Parameter "'. $params[$i-2][0] .'" is invalid.</span>';
+		}
+		
+		// Options
+		//if (isset($input['options']))
+		//	$input['options'] = explode(',',preg_replace("| |", '', $input['options']));
+			
+		if (isset($input['nowiki']) and is_numeric($input['nowiki']))
+			$wgNoWiki = $input['nowiki'];
+		
+		
+		if ($type === 'key')
+			$output = self::getKeybind($parser, $input);
+			
+		echo isset($input['nowiki']) and is_numeric($input['nowiki']);
+		
+		// Output
+		if ($wgNoWiki>0)
+			return array($output, 'nowiki' => true );
+		return $output;
+		
+	}
+	
 }
 
-/* {{#df_tile:43:222:219:221<br/>
-33:214:184:221<br/>
-162:211:188:221|7:0:1:6:0:0:6:0:0:6:0:0<br/>7:0:1:0:7:1:0:7:1:6:0:0<br/>7:0:1:0:7:1:0:7:1:6:0:0|[[File:Phoebus 16x16.png|link=]|] */
 

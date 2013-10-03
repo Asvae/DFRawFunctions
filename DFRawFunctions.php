@@ -59,6 +59,7 @@ function efDFRawFunctions_Initialize (&$parser)
 	$parser->setFunctionHook('df_building',		'DFRawFunctions::getBuilding');
 	$parser->setFunctionHook('df_item',		'DFRawFunctions::getItem');
 	$parser->setFunctionHook('df_tile',		'DFRawFunctions::colorTile');
+	$parser->setFunctionHook('df',		'DFRawFunctions::dfMain');
 	
 	
 	return true;
@@ -66,22 +67,24 @@ function efDFRawFunctions_Initialize (&$parser)
 
 function efDFRawFunctions_RegisterMagicWords (&$magicWords, $langCode)
 {
-	$magicWords['df_raw']		= array(0, 'df_raw');
-	$magicWords['df_tag']		= array(0, 'df_tag');
-	$magicWords['df_tagentry']	= array(0, 'df_tagentry');
-	$magicWords['df_tagvalue']	= array(0, 'df_tagvalue');
+	$magicWords['df_raw']			= array(0, 'df_raw');
+	$magicWords['df_tag']			= array(0, 'df_tag');
+	$magicWords['df_tagentry']		= array(0, 'df_tagentry');
+	$magicWords['df_tagvalue']		= array(0, 'df_tagvalue');
 	$magicWords['df_foreachtag']	= array(0, 'df_foreachtag');
 	$magicWords['df_foreachtoken']	= array(0, 'df_foreachtoken');
-	$magicWords['df_makelist']	= array(0, 'df_makelist');
-	$magicWords['df_statedesc']	= array(0, 'df_statedesc');
+	$magicWords['df_makelist']		= array(0, 'df_makelist');
+	$magicWords['df_statedesc']		= array(0, 'df_statedesc');
 	$magicWords['df_cvariation']	= array(0, 'df_cvariation');
-	$magicWords['mreplace']		= array(0, 'mreplace');
-	$magicWords['delay']		= array(0, 'delay');
-	$magicWords['eval']		= array(0, 'eval');
-	$magicWords['df_type']		= array(0, 'df_type');
+	$magicWords['mreplace']			= array(0, 'mreplace');
+	$magicWords['delay']			= array(0, 'delay');
+	$magicWords['eval']				= array(0, 'eval');
+	$magicWords['df_type']			= array(0, 'df_type');
 	$magicWords['df_keybind']		= array(0, 'df_keybind');
 	$magicWords['df_building']		= array(0, 'df_building');
-	$magicWords['df_item']		= array(0, 'df_item');
-	$magicWords['df_tile']		= array(0, 'df_tile');
+	$magicWords['df_item']			= array(0, 'df_item');
+	$magicWords['df_tile']			= array(0, 'df_tile');
+	$magicWords['df']		= array(0, 'df');
+	
 	return true;
 }
