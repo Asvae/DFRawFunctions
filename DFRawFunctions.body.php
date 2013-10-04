@@ -109,6 +109,49 @@ class DFRawFunctions
 		return $output;
 	}
 
+	/** 
+	*	Same as loadFile, but works only with arrays
+    **/
+	private static function loadRaw ($data)
+	{
+		$options=explode(":",$options);
+		
+		// checks if reading from disk is enabled
+		global $wgDFRawEnableDisk;
+		if (!$wgDFRawEnableDisk)
+			if ($output===false){$output=$data;}
+		
+		// checks if path exists
+		global $wgDFRawPath;
+		if (!is_dir($wgDFRawPath))
+			if ($output===false){$output=$data;}
+		
+		$filenames = str_replace(array('/', '\\'), '', $data);
+		
+		$filenames = self::multiexplode(array(";",":"),$filenames);
+		if ($filenames[0][0]=="Masterwork"){$mw=true;}
+		
+		// main module
+		foreach ($filenames as $i=>&$filename)
+		{	
+		
+			if ($i=0 and count($filename) != 2){$output=$data; break;}
+			if (count($filename)===2){$filename_count=$i;}
+			if (count($filename) != 2)
+			{
+			$filename[1]=$filename[0];
+			$filename[0]=$filenames[$filename_count][0];
+			}
+			$wantfile[$i] = $wgDFRawPath .'/'. $filename[0] .'/'. $filename[1];
+			if (!is_file($wantfile[$i]))
+				return '<span class="error">Requested file is missing: "'.  $filename[0] .'/'. $filename[1] .'".</span>';
+			$output.=file_get_contents($wantfile[$i]);
+		}
+		
+		return $output;
+	}
+	
+	
 	// Take an entire raw file and extract one entity
 	// If 'object' is not specified, returns the entire file
 	public static function raw (&$parser, $data = '', $object = '', $id = '', $notfound = '')
@@ -709,7 +752,7 @@ class DFRawFunctions
 		$step='';
 		if (($l_type[0]=="BUILDING" and isset($l_type[1]))or($l_type[0]=="BUILD_KEY")){
 			foreach ($tmp as &$step)
-			$step = self::getKeybind($parser, $step);
+			$step = self::keyTrans($parser, $step);
 			}
 			
 		if ($Check and $Number === ''){return "''' There is ".count(array_unique($tmp))." ".implode(":",$l_type)."s in total.'''";}
@@ -728,7 +771,7 @@ class DFRawFunctions
 	
 	
 	// Makes "Alt+Ctrl+S" from "CUSTOM_SHIFT_ALT_CTRL_S".
-	public static function getKeybind (&$parser, $input=array())
+	public static function keyTrans ($input=array())
 	{
 		if (!isset($input['replace'])) $input['replace']="$1";
 		if (!isset($input['join'])) $input['join']='-';
@@ -767,7 +810,7 @@ class DFRawFunctions
 	- if 2 parameters: 1st should be BUILDING_FURNACE, BUILDING_WORKSHOP or NAME :INVENTOR;:TAILOR;:Brewery;Inventor's Workbench;Gong
 	
 	*/
-	public static function getBuilding (&$parser, $data = '', $buildings = '', $options = '')
+	public static function getBuilding ($input = array())
 	{
 		$mtime = microtime(); $mtime = explode(" ",$mtime); $mtime = $mtime[1] + $mtime[0]; $starttime = $mtime; 
 		
@@ -779,7 +822,7 @@ class DFRawFunctions
 		
 		$tags = self::getTags(self::loadFile($data));
 		
-		$buildings=self::multiexplode(array(';',':'),$buildings);
+		
 		
 		foreach ($buildings as $i=>&$building)
 		{	if (count($building)==2)
@@ -794,7 +837,7 @@ class DFRawFunctions
 			}
 		}unset($building);
 		
-		$options=self::multiexplode(array(';',':'),$options);
+		
 		$options_invalid=explode(", ","TILE, COLOR, DIM, 0, 1, 2, 3, WORK_LOCATION, BUILD_ITEM, NOWIKI, TILESET, NAME, BLOCK, BUILDING, NAME_COLOR, BUILD_LABOR, BUILD_KEY, BUILD_ITEM");
 		
 		// options_limit checks for unneeded options, those will be omitted later
@@ -1232,30 +1275,6 @@ class DFRawFunctions
 		return  $tmp;
 	}
 	
-	// Fix corrupted masterwork raws
-	public static function masterworkRawFix($string)
-	{
-		$start=0;
-		$words=array();
-		$i=0;
-		while(true)
-		{
-			$start = strpos($string,'!NO',$start);
-			$end = strpos($string, '!', $start+1);
-			
-			if ($start === FALSE or $end === FALSE or $end-$start > 30)
-				break;
-			$words['corrupted'][] = substr($string,$start,$end-$start+1);
-			
-			$start=$end;
-		}
-		foreach ($words['corrupted'] as $word)
-			$words['fixed']="YES".substr($word,3,-1).'[';
-		
-		$string=str_replace($words['corrupted'], $words['fixed'], $string);
-		return $string;
-	}
-	
 	// Fetches tokens, returns their descriptions (taken from wiki)
 	public static function getToken($input)
 	{
@@ -1426,13 +1445,16 @@ class DFRawFunctions
 		global $wgNoWiki;
 		
 		// Easters and type check
-		$valid_type = explode(', ','key, building'); //#### Valid type
-		if ($type === '') return '<span class="error">The df function has no telepathic abilities. Feed it gently with parameters of your choice.</span>';
-		if (!in_array($type,$valid_type)) return '<span class="error">The df function has no such a functionality. Choose supported type instead of $type.</span>';
+		$valid_type = explode(', ','key');
+		if ($type === '') return '<span class="error">Df function has no telepathic abilities. Feed it gently with parameters of your choice.</span>';
+		if (!in_array($type,$valid_type)) return '<span class="error">Df function lacks required functionality. Choose supported type instead of $type.</span>';
 		
 			
 		// Convert all parameters into one array - $input
-		$valid_params = explode(', ','options, building, main, key, nowiki'); //#### Valid parameters
+		$valid_params = explode(', ',
+		/*keyTrans*/ 'key, replace, join, '.
+		
+		/**/'option, building, main, key, nowiki');
 		for ($i = 2; $i <= func_num_args()-1; $i++)
 		{
 			$params[$i-2] = preg_replace("|\n|", '', func_get_arg($i));
@@ -1444,16 +1466,29 @@ class DFRawFunctions
 				return '<span class="error">Parameter "'. $params[$i-2][0] .'" is invalid.</span>';
 		}
 		
-		// Options
-		//if (isset($input['options']))
-		//	$input['options'] = explode(',',preg_replace("| |", '', $input['options']));
+		// option
+		//if (isset($input['option']))
+		//	$input['option'] = explode(',',preg_replace("| |", '', $input['option']));
 			
 		if (isset($input['nowiki']) and is_numeric($input['nowiki']))
 			$wgNoWiki = $input['nowiki'];
 		
-		
+		//*** Key
 		if ($type === 'key')
-			$output = self::getKeybind($parser, $input);
+		{
+			if (!isset($input['key'])) return '<span class="error">Define df:key parameter (key).</span>';
+			$output = self::keyTrans($input);
+		}
+			
+		//*** Buiding $data = '', $building = '', $option = ''
+		if ($type === 'building')
+		{	
+			if (!isset($input['filename']) or !isset($input['building'] or !isset($input['option']))
+				return '<span class="error">Define df:building parameters (filename, building, option).</span>';
+			$option=self::multiexplode(array(';',':'),$option);
+			$output = self::getBuilding($input);
+			
+		}
 			
 		echo isset($input['nowiki']) and is_numeric($input['nowiki']);
 		
