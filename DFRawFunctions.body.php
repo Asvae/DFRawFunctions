@@ -96,7 +96,7 @@ class DFRawFunctions
 			$filename[1]=$filename[0];
 			$filename[0]=$filenames[$filename_count][0];
 			}
-			// in case Meph will make a lot of txt files in raws, that could be changed to befit folder structure and not just namespaces
+			
 			$wantfile[$i] = $wgDFRawPath .'/'. $filename[0] .'/'. $filename[1];
 			if (!is_file($wantfile[$i])){echo ($wantfile[$i]); $output=$data; break;}
 			$output.=file_get_contents($wantfile[$i]);
@@ -112,39 +112,41 @@ class DFRawFunctions
 	/** 
 	*	Same as loadFile, but works only with arrays
     **/
-	private static function loadRaw ($data)
-	{
-		$options=explode(":",$options);
-		
-		// checks if reading from disk is enabled
+	private static function loadRaw ($input)
+	{	
+		// Check if reading from disk is enabled
 		global $wgDFRawEnableDisk;
 		if (!$wgDFRawEnableDisk)
-			if ($output===false){$output=$data;}
+			return '<span class="error">Reading from disk is prohibited.</span>';
 		
-		// checks if path exists
+		// Check if path exists
 		global $wgDFRawPath;
 		if (!is_dir($wgDFRawPath))
-			if ($output===false){$output=$data;}
+			return '<span class="error">Wrong path to file (check $wgDFRawPath in DFRawFunctions.php).</span>';
 		
-		$filenames = str_replace(array('/', '\\'), '', $data);
+		// Access filename
+		global $wgRawPath;
+		$filenames=$wgRawPath;
 		
-		$filenames = self::multiexplode(array(";",":"),$filenames);
-		if ($filenames[0][0]=="Masterwork"){$mw=true;}
-		
-		// main module
+		// Balance partial input and load file
+		$output='';
 		foreach ($filenames as $i=>&$filename)
 		{	
 		
-			if ($i=0 and count($filename) != 2){$output=$data; break;}
-			if (count($filename)===2){$filename_count=$i;}
+			if ($i=0 and count($filename) != 2)
+				return '<span class="error">Specify file folder.</span>';
+				
+			if (count($filename)===2) $filename_count=$i;
 			if (count($filename) != 2)
 			{
-			$filename[1]=$filename[0];
-			$filename[0]=$filenames[$filename_count][0];
+				$filename[1]=$filename[0];
+				$filename[0]=$filenames[$filename_count][0];
 			}
-			$wantfile[$i] = $wgDFRawPath .'/'. $filename[0] .'/'. $filename[1];
+			$wantfile[$i] = $wgDFRawPath .'/'. $filename[0] .'/'. $filename[1] .'.txt';
+			
 			if (!is_file($wantfile[$i]))
 				return '<span class="error">Requested file is missing: "'.  $filename[0] .'/'. $filename[1] .'".</span>';
+				
 			$output.=file_get_contents($wantfile[$i]);
 		}
 		
@@ -812,19 +814,19 @@ class DFRawFunctions
 	*/
 	public static function getBuilding ($input = array())
 	{
-		$mtime = microtime(); $mtime = explode(" ",$mtime); $mtime = $mtime[1] + $mtime[0]; $starttime = $mtime; 
+		// $mtime = microtime(); $mtime = explode(" ",$mtime); $mtime = $mtime[1] + $mtime[0]; $starttime = $mtime; 
 		
 		// Defining variables and input check
 		$tags = array(); $dim = array(); $block = array(); $color = array(); $tile = array(); $item=array(); $single_tag=array();
 		$j = 0; $i = 0; $type_check = FALSE;  $single_tag_counter=0; 
-		$item_counter=-1;  $bMagma=FALSE; $output=FALSE;
+		$item_counter=-1;  $bMagma=FALSE; $output_tmp=FALSE;
 		$building_invalid=array("BUILDING_FURNACE", "BUILDING_WORKSHOP", "NAME");
 		
-		$tags = self::getTags(self::loadFile($data));
+		$tags = self::getTags(self::loadRaw($input['filename']));
+		print_r($input);
 		
-		
-		
-		foreach ($buildings as $i=>&$building)
+		// Check building and fix partial input
+		foreach ($input['building'] as $i=>&$building)
 		{	if (count($building)==2)
 				$invalid=array_diff(array($building[0]), $building_invalid);
 			if ($invalid)
@@ -838,18 +840,18 @@ class DFRawFunctions
 		}unset($building);
 		
 		
-		$options_invalid=explode(", ","TILE, COLOR, DIM, 0, 1, 2, 3, WORK_LOCATION, BUILD_ITEM, NOWIKI, TILESET, NAME, BLOCK, BUILDING, NAME_COLOR, BUILD_LABOR, BUILD_KEY, BUILD_ITEM");
+		$option_invalid=explode(", ","TILE, COLOR, DIM, 0, 1, 2, 3, WORK_LOCATION, BUILD_ITEM, NOWIKI, TILESET, NAME, BLOCK, BUILDING, NAME_COLOR, BUILD_LABOR, BUILD_KEY, BUILD_ITEM");
 		
 		// options_limit checks for unneeded options, those will be omitted later
-		$options_limit=$options_invalid;
-		foreach ($options as &$option)
+		$options_limit=$option_invalid;
+		foreach ($input['option'] as &$option)
 		{	
 			// patches for specific options
 			if (in_array("TILESET",$option)){$option["tile"]="TILE";}
 			if (in_array("COLOR",$option)){$option["tile"]="TILE";}
 			if (in_array("BLOCK",$option)){$option["work_location"]="WORK_LOCATION";}
 			
-			$invalid=array_diff($option, $options_invalid);
+			$invalid=array_diff($option, $option_invalid);
 			if ($invalid)
 				return "<span class=\"error\">Unrecognized option: ".implode(', ',$invalid)."</span>";
 			$options_limit=array_diff($options_limit, $option);
@@ -857,13 +859,13 @@ class DFRawFunctions
 			$option["building_stage"] = preg_grep("/[0-2]/",$option);
 			if ($option["building_stage"]==false){$option["building_stage"]=3;
 			}else{	
-				$option["building_stage"] = $option["building_stage"][0];}
-		}
-		echo "options=". implode(', ',array_diff($options_invalid,$options_limit)) ."<br/>";
+				$options["building_stage"] = $option["building_stage"][0];}
+		} unset ($option);
+		//echo "option=". implode(', ',array_diff($option_invalid,$options_limit)) ."<br/>";
 		// Break limit for NAME
 		$options_limit=array_diff($options_limit,array("NAME"));
 		$shopsum=array(); $shop=-1;
-		//echo "\n\r  buildings="; print_r($buildings);
+		//echo "\n\r  buildings="; print_r($input['building']);
 		// Extract arrays: dim (workshop dimensions), work_location, block, tile, color, item, single_tag from tag for required buildings
 		foreach ($tags as $i=>$tag)
 		{	// operates shop number
@@ -877,7 +879,7 @@ class DFRawFunctions
 			
 			// makes type_check true if shop name fits
 			if ($type_check === false)
-				foreach ($buildings as $i=>$building)
+				foreach ($input['building'] as $i=>$building)
 					if (isset($tag[1]))
 						if ($building[1]==='ANY' or ((($building[0] === "ANY" and in_array($tag[0], array("BUILDING_FURNACE", "BUILDING_WORKSHOP","NAME"))) or ($tag[0] === $building[0])) and $tag[1] === $building[1]))
 						{
@@ -932,28 +934,31 @@ class DFRawFunctions
 		//echo "\n\r  array dimensions=".count($shopsum).":".count($options);
 		//echo "\n\r  tile_3="; print_r($shopsum['TILE'][3]);
 		//echo "\n\r  color_3="; print_r($shopsum['COLOR'][3]);
-		foreach ($options as $i=>$option)
-		{
+		print_r($input['option']);
+		foreach ($input['option'] as $i => $option)
+		{	
+			print_r($option);
+			//echo implode($option);
 			for ($j=0; $j<=count($shopsum["BUILDING"])-1; $j++)
 			{	//DIM
 				if (in_array("DIM",$option))
-					{$output[$i][$j]=implode("&#x2715;",$shopsum["DIM"][$i]);}
+					{$output_tmp[$i][$j]=implode("&#x2715;",$shopsum["DIM"][$i]);}
 				
 			}
 			
 			if (in_array("TILESET",$option))
 			{	// TILESET
-				$output[$i]=self::colorTile($parser, $shopsum['TILE'][$option["building_stage"]],'', "[[File:Phoebus 16x16.png|link=]]", 16);}
+				$output_tmp[$i]=self::colorTile($parser, $shopsum['TILE'][$option["building_stage"]],'', "[[File:Phoebus 16x16.png|link=]]", 16);}
 			else
 			{	// TILE:COLOR
 				if (in_array('TILE',$option) and in_array("COLOR",$option))
-				$output[$i]=self::colorTile($parser, $shopsum['TILE'][$option["building_stage"]], $shopsum["COLOR"][$option["building_stage"]]);
+				$output_tmp[$i]=self::colorTile($parser, $shopsum['TILE'][$option["building_stage"]], $shopsum["COLOR"][$option["building_stage"]]);
 				// TILE
 				if (in_array('TILE',$option) and !in_array("COLOR",$option))
-				$output[$i]=self::colorTile($parser, $shopsum['TILE'][$option["building_stage"]], '');
+				$output_tmp[$i]=self::colorTile($parser, $shopsum['TILE'][$option["building_stage"]], '');
 				// COLOR
 				if (!in_array('TILE',$option) and in_array("COLOR",$option))
-				$output[$i]=self::colorTile($parser, '', $shopsum['COLOR'][$option["building_stage"]]);
+				$output_tmp[$i]=self::colorTile($parser, '', $shopsum['COLOR'][$option["building_stage"]]);
 			}
 			// BLOCK
 			if (in_array("BLOCK",$option))
@@ -984,20 +989,28 @@ class DFRawFunctions
 					}
 					
 				}
-				$output[$i]=self::colorTile($parser, $block_tile, $block_color);
+				$output_tmp[$i]=self::colorTile($parser, $block_tile, $block_color);
 			}
 			// !!!BUILD_ITEM
 			if (in_array("BUILD_ITEM",$option))
 			{
-				$output=self::getItem($parser, $shopsum["BUILD_ITEM"], $shopsum["SINGLE_TAG"]);
+				$output_tmp[$i]=self::getItem($parser, $shopsum["BUILD_ITEM"], $shopsum["SINGLE_TAG"]);
 			}
 			// !!!REACTION
 			// !!!BUILD_PROFESSION
 			//
-			
-			
 		}
-		echo "output=";print_r($output);
+			// Diagonally mirroring array
+			foreach ($output_tmp as $i => $option_output_tmp)
+				foreach ($option_output_tmp as $j => $building_option_output_tmp)
+					$output[$j][$i] = $building_option_output_tmp;
+					
+			echo "output=";print_r($output);
+			foreach ($output as $i => &$building_input)
+				$building_input = '<tr align="center"><td>'. implode('</td><td>', $building_input) .'</td></tr>';
+				
+		return '<table border="1" cellspacing="0" cellpadding="6">'. implode($output) .'</table>';
+		
 				
 		### Return items
 		// if (in_array("BUILD_ITEM",$options) and $item[$j]!='')
@@ -1027,7 +1040,7 @@ class DFRawFunctions
 		
 		// return $output;
 		
-		$mtime = microtime();$mtime = explode(" ",$mtime);$mtime = $mtime[1] + $mtime[0]; $endtime = $mtime; $totaltime = ($endtime - $starttime); echo "This page was created in ".$totaltime." seconds"; 
+		//$mtime = microtime();$mtime = explode(" ",$mtime);$mtime = $mtime[1] + $mtime[0]; $endtime = $mtime; $totaltime = ($endtime - $starttime); echo "This page was created in ".$totaltime." seconds"; 
 	}
 	
 	
@@ -1442,19 +1455,15 @@ class DFRawFunctions
 	
 	public static function dfMain (&$parser, $type = ''/*, ...*/)
 	{
-		global $wgNoWiki;
+		global $wgNoWiki, $wgRawPath;
 		
-		// Easters and type check
-		$valid_type = explode(', ','key');
 		if ($type === '') return '<span class="error">Df function has no telepathic abilities. Feed it gently with parameters of your choice.</span>';
-		if (!in_array($type,$valid_type)) return '<span class="error">Df function lacks required functionality. Choose supported type instead of $type.</span>';
 		
 			
 		// Convert all parameters into one array - $input
 		$valid_params = explode(', ',
 		/*keyTrans*/ 'key, replace, join, '.
-		
-		/**/'option, building, main, key, nowiki');
+		/*else*/'filename, option, building, main, nowiki');
 		for ($i = 2; $i <= func_num_args()-1; $i++)
 		{
 			$params[$i-2] = preg_replace("|\n|", '', func_get_arg($i));
@@ -1473,24 +1482,38 @@ class DFRawFunctions
 		if (isset($input['nowiki']) and is_numeric($input['nowiki']))
 			$wgNoWiki = $input['nowiki'];
 		
-		//*** Key
-		if ($type === 'key')
+		if (isset($input['filename']))
 		{
-			if (!isset($input['key'])) return '<span class="error">Define df:key parameter (key).</span>';
-			$output = self::keyTrans($input);
+			$input['filename'] = str_replace('\\', '', $input['filename']);
+			$input['filename'] = self::multiexplode(array(";","/"),$input['filename']);
+			$wgRawPath=$input['filename'];
 		}
+		
+		switch ($type)
+		{
+			//*** Key
+			case 'key':
+				if (!isset($input['key'])) return '<span class="error">Define df:key parameter (key).</span>';
+				$output = self::keyTrans($input);
+			break;
 			
-		//*** Buiding $data = '', $building = '', $option = ''
-		if ($type === 'building')
-		{	
-			if (!isset($input['filename']) or !isset($input['building'] or !isset($input['option']))
-				return '<span class="error">Define df:building parameters (filename, building, option).</span>';
-			$option=self::multiexplode(array(';',':'),$option);
-			$output = self::getBuilding($input);
+			//*** Load (just load raws)
+			case 'load':
+				if (!isset($input['filename'])) return '<span class="error">Define df:load parameter (filename).</span>';
+				$output = self::loadRaw($input['filename']);
+			break;
 			
+			//*** Buiding $data = '', $building = '', $option = ''
+			case 'building':
+				if (!isset($input['filename']) or !isset($input['building']))
+					return '<span class="error">Define df:building parameters (filename, building, option).</span>';
+				$input['option'] = self::multiexplode(array(';',':'),$input['option']);
+				$input['building'] = self::multiexplode(array(';',':'),$input['building']);
+				$output = self::getBuilding($input);
+			break;
+			default:
+				return '<span class="error">Df function lacks required functionality. Choose supported type instead of "'. $type .'".</span>';
 		}
-			
-		echo isset($input['nowiki']) and is_numeric($input['nowiki']);
 		
 		// Output
 		if ($wgNoWiki>0)
