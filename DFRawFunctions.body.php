@@ -147,12 +147,42 @@ class DFRawFunctions
 			if (!is_file($wantfile[$i]))
 				return '<span class="error">Requested file is missing: "'.  $filename[0] .'/'. $filename[1] .'".</span>';
 				
-			$output.=file_get_contents($wantfile[$i]);
+			$file=file_get_contents($wantfile[$i]);
+			if ($filename[0]='Masterwork')
+				$output.=self::masterworkRawFix($file);
+			else
+				$output.=$file;
 		}
 		
 		return $output;
 	}
 	
+	// Fix corrupted masterwork raws
+	public static function masterworkRawFix($string)
+	{
+		$start=0;
+		$words=array();
+		$i=0;
+		while(true)
+		{
+			$start = strpos($string,'!NO',$start);
+			$end = strpos($string, '!', $start+1);
+			
+			if ($start === FALSE or $end === FALSE or $end-$start > 30)
+				break;
+			$words['corrupted'][] = substr($string,$start,$end-$start+1);
+			
+			$start=$end;
+		}
+		if($start)
+		{
+			foreach ($words['corrupted'] as $word)
+				$words['fixed']="YES".substr($word,3,-1).'[';
+		
+			$string=str_replace($words['corrupted'], $words['fixed'], $string);
+		}
+		return $string;
+	}
 	
 	// Take an entire raw file and extract one entity
 	// If 'object' is not specified, returns the entire file
@@ -661,78 +691,60 @@ class DFRawFunctions
 	6) Description: description for wiki, works only with "N:FORMAT"
 	*/
 
-	public static function getType (&$parser, $data = '', $object = '', $requirement = '', $l_type = '', $number = '',  $description = '')
+	public static function getType ($in)
 	{
-		//String support
-		if (is_string($data))
-			$wgStringInput=true;
+	
+		if (!isset($in['padding']) $in['padding']='';
+		$zeros=array_fill(0,count($in['obj_cond']),0);
+		$ones=array_fill(0,count($in['obj_cond']),1);
+		$obj_check=$zeros;
 		
-		// checks for errors and extracts from $number: number of reaction, options (ORDER, CHECK, FORMAT).
-		$number=explode(":",$number);
-		$Order = FALSE; $Check = FALSE; $Format = FALSE; $FirstOnly = FALSE; $Doubles = FALSE; $Number=''; 
-		if ($number!='' and gettype($number)!="integer" and is_array($number))
-		{
-			foreach ($number as &$tmp)
-			{	
-				//echo "<br/>".$number;
-				switch ($tmp)
+	
+		//$object = '', $requirement = '', $l_type = '', $number = '',  $description = ''
+	
+		$tag = self::getTags($data);
+		
+		$e = 0; $i = 0; $return_value = ''; $tmp=array(); $obj_num = -1;
+		
+		while ($i<=(count($tag)-1))
+		{	
+			// Checks if left tag fits object
+			if ($tag[$i][0] === $in['object'])
+			{ 	
+				$that_obj = false; 
+				$i_obj = $i; $obj_check = $zeros;
+			}	
+				
+			// Check obj_cond, leap back on affirm
+			if ($that_obj === false)
+			{
+				foreach ($in['obj_cond'] as $c => $condition)
+					if  (array_diff($condition, $tag[$i]) === array())
+						$obj_check[$c] = 0;) 
+						
+				if ($obj_check === $ones)
 				{
-					case "ORDER":
-						$Order = TRUE; break;
-					case "CHECK":
-						$Check = TRUE; break;
-					case "FORMAT":
-						$Format = TRUE; break;
-					case "FIRST_ONLY":
-						$FirstOnly = TRUE; break;
-					case "DOUBLES":
-						$Doubles = TRUE; break;
+					$that_obj = TRUE; 
+					$i=$i_obj; $obj_num++;
 				}
-				
-				if (is_numeric($tmp))
-					$Number=$tmp;
-				if (!is_numeric($tmp) and $tmp!="ORDER" and $tmp!="CHECK" and $tmp!="FORMAT" and $tmp!='' and $tmp!="FIRST_ONLY" and $tmp!="DOUBLES")
-					return '<span class="error">Error, check input values for getType</span>';
-			}unset ($tmp);
-		}
-		if (is_numeric($number)){$Number=$number;}
-		//echo "<br/>".$requirement.": ".$Number.' | '.$Order.' | '.$Check.' | '.$Format;
-		$requirement=explode(":",$requirement); $l_type=explode(":",$l_type);
-		$data = self::loadFile($data); $tags = self::getTags($data);
-		
-		if (!$object)
-			return $data;
-		$e=0; $i = 0; $obj_numb=0; $return_value = ''; $tmp=array(); $obj_num=0;
-		
-		while ($i<=(count($tags)-1))
-		{
-			if ($tags[$i][0]==$object)
-			{ 			// Checks if left tag fits OBJECT.
-				$obj_num=$obj_num+1; $affirmed_type=FALSE; $i_object=$i; 
 			}
-			if ($obj_num>0)
-			{ 		// Made in case something's wrong with quotes.
-				if  (array_diff($requirement, $tags[$i])==array() and $affirmed_type == FALSE) // Checks if TYPE:PARAMETER is present in the OBJECT. Puts flag and leaps back if yes.
-				{$affirmed_type = TRUE; $i=$i_object;}
-				
-				if ($affirmed_type == TRUE)
+			else
+			{
+				foreach ($in['tag_cond'] as $c => $condition)
 				{
-					$tmp_e=array();
-					// advanced requirement check
-					if ($Order)
+					if (in_array('order',$in['option'][$c])
 					{
-						if (array_intersect_assoc($l_type, $tags[$i])==$l_type)
+						if (array_intersect_assoc($condition, $tag[$i]) === $condition)
 						{
-							$tmp_e=array_slice($tags[$i],count($l_type));
-							$tmp[$e]=implode(":",$tmp_e); $e++;
+							$tmp[$c][$obj_num][$i] = array_slice($tag[$i],count($condition));
 						} 
 					}
 					else
 					{
-						$tmp_e=array_diff($tags[$i], $l_type);
-						if (count($tmp_e) != count($tags[$i]))
+						$difference=array_diff($tag[$i], $conditions);
+						if ($difference) != count($tag[$i]))
 						{
-							$tmp[$e]=implode(":",$tmp_e); $e++;
+							$tmp[$c][$obj_num][$i] = $difference;
 						}
 					}
 				}
@@ -1459,58 +1471,81 @@ class DFRawFunctions
 		
 		if ($type === '') return '<span class="error">Df function has no telepathic abilities. Feed it gently with parameters of your choice.</span>';
 		
-			
-		// Convert all parameters into one array - $input
-		$valid_params = explode(', ',
-		/*keyTrans*/ 'key, replace, join, '.
-		/*else*/'filename, option, building, main, nowiki');
+		// Convert all parameters into $in array
+		//$valid_params = explode(', ',
+		/*keyTrans*/ //'key, replace, join, '.
+		/*else*/ //'filename, option, building, main, nowiki');
 		for ($i = 2; $i <= func_num_args()-1; $i++)
 		{
 			$params[$i-2] = preg_replace("|\n|", '', func_get_arg($i));
 			$params[$i-2] = explode('=',$params[$i-2]);
 			if (!(count($params[$i-2]) === 2)) return '<span class="error">Either "=" is missing or too much of them.</span>';
-			if (in_array($params[$i-2][0],$valid_params))
-				$input[$params[$i-2][0]] = $params[$i-2][1];
-			else
-				return '<span class="error">Parameter "'. $params[$i-2][0] .'" is invalid.</span>';
+			//if (in_array($params[$i-2][0],$valid_params))
+				$in[$params[$i-2][0]] = $params[$i-2][1];
+			//else
+				//return '<span class="error">Parameter "'. $params[$i-2][0] .'" is invalid.</span>';
 		}
 		
 		// option
-		//if (isset($input['option']))
-		//	$input['option'] = explode(',',preg_replace("| |", '', $input['option']));
+		//if (isset($in['option']))
+		//	$in['option'] = explode(',',preg_replace("| |", '', $in['option']));
 			
-		if (isset($input['nowiki']) and is_numeric($input['nowiki']))
-			$wgNoWiki = $input['nowiki'];
+		if (isset($in['nowiki']) and is_numeric($in['nowiki']))
+			$wgNoWiki = $in['nowiki'];
 		
-		if (isset($input['filename']))
+		if (isset($in['filename']))
 		{
-			$input['filename'] = str_replace('\\', '', $input['filename']);
-			$input['filename'] = self::multiexplode(array(";","/"),$input['filename']);
-			$wgRawPath=$input['filename'];
+			$in['filename'] = str_replace(array('\\','/'), array('',':'), $in['filename']);
+			$in['filename'] = self::multiexplode(array(";",":"),$in['filename']);
+			$wgRawPath=$in['filename'];
 		}
 		
 		switch ($type)
 		{
-			//*** Key
+			//*** Key: key
 			case 'key':
-				if (!isset($input['key'])) return '<span class="error">Define df:key parameter (key).</span>';
-				$output = self::keyTrans($input);
+				if (!isset($in['key'])) return '<span class="error">Define df:key parameter (key).</span>';
+				$output = self::keyTrans($in);
 			break;
 			
-			//*** Load (just load raws)
+			//*** Load: filename (Just. Load. Raws.)
 			case 'load':
-				if (!isset($input['filename'])) return '<span class="error">Define df:load parameter (filename).</span>';
-				$output = self::loadRaw($input['filename']);
+				if (!isset($in['filename'])) return '<span class="error">Define df:load parameter (filename).</span>';
+				$output = self::loadRaw($in['filename']);
 			break;
 			
-			//*** Buiding $data = '', $building = '', $option = ''
+			//*** Buiding: $data = '', $building = '', $option = ''
 			case 'building':
-				if (!isset($input['filename']) or !isset($input['building']))
+				if (!isset($in['filename'], $in['building'], $in['options']))
 					return '<span class="error">Define df:building parameters (filename, building, option).</span>';
-				$input['option'] = self::multiexplode(array(';',':'),$input['option']);
-				$input['building'] = self::multiexplode(array(';',':'),$input['building']);
-				$output = self::getBuilding($input);
+				$in['option'] = self::multiexplode(array(';',':'),$in['option']);
+				$in['building'] = self::multiexplode(array(';',':'),$in['building']);
+				$output = self::getBuilding($in);
 			break;
+			
+			case 'type':
+			
+				print_r($in);
+				
+				if (!(isset($in['filename']) or isset($in['data'])) and !isset($in['obj_cond']))
+					return '<span class="error">Define df:cond parameters (filename or data, obj_cond).</span>';
+				
+				$in['obj_cond'] = self::multiexplode(array(';',':'),$in['obj_cond']);
+				if isset($in['tag_cond'])
+					$in['tag_cond'] = self::multiexplode(array(';',':'),$in['tag_cond']);
+				
+				if (isset($in['filename'],$in['data']))
+					return '<span class="error">Specify either "data" or "filename".</span>';
+					
+				if (isset($in['filename']))
+				{
+					$in['data'] = self::loadRaw($in['filename']);
+					unset ($in['filename']);
+				}
+				if (isset($in['condition'],$in['data']))
+					$output = self::getType($in);
+			break;
+			
 			default:
 				return '<span class="error">Df function lacks required functionality. Choose supported type instead of "'. $type .'".</span>';
 		}
@@ -1518,10 +1553,9 @@ class DFRawFunctions
 		// Output
 		if ($wgNoWiki>0)
 			return array($output, 'nowiki' => true );
-		return $output;
+		return 'blah';//$output;
 		
 	}
-	
 }
 
 
