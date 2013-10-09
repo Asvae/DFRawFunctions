@@ -690,24 +690,29 @@ class DFRawFunctions
 		6.  "ORDER"		compares first tags with Object, otherwise searches through every tag.
 	6) Description: description for wiki, works only with "N:FORMAT"
 	*/
-
+	
+	// {{#df:type|object=BUILDING_WORKSHOP|filename=building_masterwork|obj_req=BUILDING_WORKSHOP:CHANDLER|tag_req=BUILD_LABOR}}
 	public static function getType ($in)
 	{
 	
-		if (!isset($in['padding']) $in['padding']='';
-		$zeros=array_fill(0,count($in['obj_cond']),0);
-		$ones=array_fill(0,count($in['obj_cond']),1);
-		$obj_check=$zeros;
+		if (!isset($in['padding'])) $in['padding'] = '';
+		if (!isset($in['option'])) $in['option'] = array_fill(0,count($in['tag_cond']),array());;
+		if (!isset($in['obj_cond'])) $in['obj_cond'] = array(array($in['object']));
+		$zeros = 		array_fill(0,count($in['obj_cond']),0);
+		$ones = 		array_fill(0,count($in['obj_cond']),1);
+		$obj_check =	$zeros;
 		
-	
+		echo $in['object'];
 		//$object = '', $requirement = '', $l_type = '', $number = '',  $description = ''
 	
-		$tag = self::getTags($data);
+		$tag = self::getTags($in['data']);
 		
-		$e = 0; $i = 0; $return_value = ''; $tmp=array(); $obj_num = -1;
+		$e = 0; $i = -1; $return_value = ''; $tmp=array(); $obj_num = -1;
+		$that_obj = false;
 		
-		while ($i<=(count($tag)-1))
+		while (++$i<=(count($tag)-1))
 		{	
+			//echo '<br/>'.$i; print_r(array_diff($condition, $tag[$i]));
 			// Checks if left tag fits object
 			if ($tag[$i][0] === $in['object'])
 			{ 	
@@ -720,66 +725,94 @@ class DFRawFunctions
 			{
 				foreach ($in['obj_cond'] as $c => $condition)
 					if  (array_diff($condition, $tag[$i]) === array())
-						$obj_check[$c] = 0;) 
+						$obj_check[$c] = 1;
 						
 				if ($obj_check === $ones)
 				{
-					$that_obj = TRUE; 
+					$that_obj = true; 
 					$i=$i_obj; $obj_num++;
+					echo $obj_num;
 				}
 			}
 			else
 			{
 				foreach ($in['tag_cond'] as $c => $condition)
 				{
-					if (in_array('order',$in['option'][$c])
+					if (in_array('order',$in['option'][$c]))
 					{
 						if (array_intersect_assoc($condition, $tag[$i]) === $condition)
 						{
-							$tmp[$c][$obj_num][$i] = array_slice($tag[$i],count($condition));
+							$tmp[$obj_num][$i] = array_slice($tag[$i], count($condition));
 						} 
 					}
 					else
 					{
-						$difference=array_diff($tag[$i], $conditions);
-						if ($difference) != count($tag[$i]))
-						{
-							$tmp[$c][$obj_num][$i] = $difference;
-						}
+						$difference=array_diff($tag[$i], $condition);
+						if (count($difference) != count($tag[$i]))
+							$tmp[$obj_num][$i] = $difference;
 					}
 				}
 			}
 			// Weird syntax, just extracts first value. 
-			if ($FirstOnly === TRUE and $e !== 0){
-			$tmp[$e-1]=(explode (':',$tmp[$e-1]));
-			$tmp[$e-1]=$tmp[$e-1][0];}
-			
-			$i++; 
-		}
-		if ($Doubles === TRUE)
-		{
-			if	($tmp != array_unique($tmp)){
-			return '<span class="error">Output contains doubles!</span>';}
-			else {return '';}
+			// if ($FirstOnly === TRUE and $e !== 0){
+			// $tmp[$e-1]=(explode (':',$tmp[$e-1]));
+			// $tmp[$e-1]=$tmp[$e-1][0];}
 		}
 		
-		$step='';
-		if (($l_type[0]=="BUILDING" and isset($l_type[1]))or($l_type[0]=="BUILD_KEY")){
-			foreach ($tmp as &$step)
-			$step = self::keyTrans($parser, $step);
-			}
+		//if ($Doubles === TRUE)
+		//{
+			//if	($tmp != array_unique($tmp)){
+			//return '<span class="error">Output contains doubles!</span>';}
+			//else {return '';}
+		//}
+		
+		//$step='';
+		//if (($l_type[0]=="BUILDING" and isset($l_type[1]))or($l_type[0]=="BUILD_KEY")){
+			//foreach ($tmp as &$step)
+			//$step = self::keyTrans($parser, $step);
+			//}
 			
-		if ($Check and $Number === ''){return "''' There is ".count(array_unique($tmp))." ".implode(":",$l_type)."s in total.'''";}
-		if ($Number === '') 
-			return implode(", ",array_unique($tmp));
-		if ($Number == -1)
-			return "Last reaction of the TYPE is: '''". ($e-1) .". ". $tmp[$e-1] .".'''";
-		if ($Number != ($e-1) and $Check)
-			return "'''".'<span class="error">Error: Last '.implode(":",$l_type).' is '.($e-1)." and not ". $Number.".</span>'''";
-		if ($Format)
-			return "'''".($Number).". ". $tmp[$Number] ."''' || " .$description;
+		//if ($Check and $Number === ''){return "''' There is ".count(array_unique($tmp))." ".implode(":",$l_type)."s in total.'''";}
+		//if ($Number === '') 
+			//return implode(", ",array_unique($tmp));
+		//if ($Number == -1)
+			// return "Last reaction of the TYPE is: '''". ($e-1) .". ". $tmp[$e-1] .".'''";
+		// if ($Number != ($e-1) and $Check)
+			// return "'''".'<span class="error">Error: Last '.implode(":",$l_type).' is '.($e-1)." and not ". $Number.".</span>'''";
+		// if ($Format)
+			// return "'''".($Number).". ". $tmp[$Number] ."''' || " .$description;
 		//otherwise
-		return $tmp[$Number];
+		if (!isset($i_obj)) return "<span class=\"error\">No ".$in['object']." is found.</span>";
+		if (!$tmp) return "<span class=\"error\">obj_cond is not met.</span>";
+		//echo '<br/>tmp='; print_r($tmp);
+		$i1=-1;
+		foreach ($tmp as &$obj)
+		{	
+			$i1++;
+			$i2=-1;
+			foreach ($obj as  &$obj_tag)
+			{	
+				$i2++;
+				$i3=-1;
+				foreach ($obj_tag as &$one_tag)
+				{
+					$i3++;
+					echo ('  '. $i3 .'-'. (count($obj_tag)-1) .'  ');
+					if ($i3 === count($obj_tag)-1) break;
+					$one_tag = preg_replace('/(&)/', $one_tag, $in['padding'][0]);
+				}
+				$obj_tag = implode($obj_tag);
+				if ($i2 === count($obj)-1) break;
+				$obj_tag = preg_replace('/(&)/', $obj_tag, $in['padding'][1]);
+			}
+			$obj = implode($obj);
+			if ($i1 === count($tmp)-1) break;
+			$obj = preg_replace('/(&)/', $obj, $in['padding'][2]);
+			
+		}
+		unset ($obj, $obj_tag, $one_tag);
+		$out = implode($tmp);
+		return $out;
 	}
 	
 	
@@ -801,11 +834,11 @@ class DFRawFunctions
 		if (in_array("NONE", $key))
 			return '';
 		if (in_array("SHIFT", $key) === FALSE)
-			$tmp=(strtolower($tmp));
+			$tmp = (strtolower($tmp));
 		if (in_array("ALT", $key))
-			$tmp="Alt-{$tmp}";
+			$tmp = "Alt-{$tmp}";
 		if (in_array("CTRL", $key))
-			$tmp="Ctrl-{$tmp}";
+			$tmp = "Ctrl-{$tmp}";
 		$parts = explode('-', $tmp);
 		foreach ($parts as &$part) 
 			$part = preg_replace('/(.+)/', $input['replace'], $part);
@@ -1468,6 +1501,7 @@ class DFRawFunctions
 	public static function dfMain (&$parser, $type = ''/*, ...*/)
 	{
 		global $wgNoWiki, $wgRawPath;
+		$wgNoWiki = 0;
 		
 		if ($type === '') return '<span class="error">Df function has no telepathic abilities. Feed it gently with parameters of your choice.</span>';
 		
@@ -1478,7 +1512,7 @@ class DFRawFunctions
 		for ($i = 2; $i <= func_num_args()-1; $i++)
 		{
 			$params[$i-2] = preg_replace("|\n|", '', func_get_arg($i));
-			$params[$i-2] = explode('=',$params[$i-2]);
+			$params[$i-2] = explode('=',$params[$i-2],2);
 			if (!(count($params[$i-2]) === 2)) return '<span class="error">Either "=" is missing or too much of them.</span>';
 			//if (in_array($params[$i-2][0],$valid_params))
 				$in[$params[$i-2][0]] = $params[$i-2][1];
@@ -1514,7 +1548,7 @@ class DFRawFunctions
 				$output = self::loadRaw($in['filename']);
 			break;
 			
-			//*** Buiding: $data = '', $building = '', $option = ''
+			//*** Buiding: filename, building, option
 			case 'building':
 				if (!isset($in['filename'], $in['building'], $in['options']))
 					return '<span class="error">Define df:building parameters (filename, building, option).</span>';
@@ -1523,15 +1557,24 @@ class DFRawFunctions
 				$output = self::getBuilding($in);
 			break;
 			
+			//*** Type: 
 			case 'type':
 			
-				print_r($in);
+				if (isset($in['padding'][$i]))
+					$in['padding'] = explode('//',$in['padding']);
+					echo 'padding='; print_r($in['padding']);
+				for ($i=0; $i<=2; $i++)
+					if (!isset($in['padding'][$i]))
+						$in['padding'][$i]=' $1 ';
+				echo 'padding='; print_r($in['padding']);
+					
+				if (!(isset($in['filename']) or isset($in['data'])) or !isset($in['object']))
+					return '<span class="error">Define df:type parameters (filename or data, object).</span>';
 				
-				if (!(isset($in['filename']) or isset($in['data'])) and !isset($in['obj_cond']))
-					return '<span class="error">Define df:cond parameters (filename or data, obj_cond).</span>';
-				
+				if (isset($in['obj_cond']))
 				$in['obj_cond'] = self::multiexplode(array(';',':'),$in['obj_cond']);
-				if isset($in['tag_cond'])
+				
+				if (isset($in['tag_cond']))
 					$in['tag_cond'] = self::multiexplode(array(';',':'),$in['tag_cond']);
 				
 				if (isset($in['filename'],$in['data']))
@@ -1542,7 +1585,10 @@ class DFRawFunctions
 					$in['data'] = self::loadRaw($in['filename']);
 					unset ($in['filename']);
 				}
-				if (isset($in['condition'],$in['data']))
+				
+				// echo '$in='; print_r($in); ////
+				
+				if (isset($in['data']))
 					$output = self::getType($in);
 			break;
 			
@@ -1553,9 +1599,17 @@ class DFRawFunctions
 		// Output
 		if ($wgNoWiki>0)
 			return array($output, 'nowiki' => true );
-		return 'blah';//$output;
+		return $output;
 		
 	}
 }
 
-
+/* Wiki text
+<table class="wikitable sortable">
+<tr><th>Header 1</th><th>Header 2</th><th>Header 2</th><th>Header 2</th></tr>
+<tr><td align="center">{{#df:type|object=BUILDING_WORKSHOP
+|obj_cond=BUILD_ITEM:BLOCKS
+|tag_cond=NAME;BUILD_KEY;DIM;BUILD_LABOR
+|padding=&://&</td><td align="center">//&</td align="center"></tr><tr><td align="center">
+|filename=Masterwork:building_masterwork}}
+</td></tr></table>*/
