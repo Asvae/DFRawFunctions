@@ -696,11 +696,15 @@ class DFRawFunctions
 	{
 	
 		if (!isset($in['option'])) $in['option'] = array_fill(0,count($in['tag_cond']),array());;
-		if (!isset($in['obj_cond'])) $in['obj_cond'] = array(array($in['object']));
+		if (!isset($in['obj_cond'])) $in['obj_cond'] = array(array($in['object'][0]));
 		$zeros = 		array_fill(0,count($in['obj_cond']),0);
 		$ones = 		array_fill(0,count($in['obj_cond']),1);
 		$obj_check =	$zeros;
 		
+		
+		//Awfull crouch (I repent, honestly)
+		if ($in['object'][0] === 'BUILDING_WORKSHOP' or $in['object'][0] === 'BUILDING_FURNACE')
+			$in['object'] = array('BUILDING_WORKSHOP', 'BUILDING_FURNACE');
 		//echo $in['object'];
 		//$object = '', $requirement = '', $l_type = '', $number = '',  $description = ''
 	
@@ -709,15 +713,17 @@ class DFRawFunctions
 		$e = 0; $i = -1; $return_value = ''; $tmp=array(); $obj_num = -1;
 		$that_obj = false;
 		
-		while (++$i<=(count($tag)-1))
+		while (++$i <= (count($tag)-1))
 		{	
 			//echo '<br/>'.$i; print_r(array_diff($condition, $tag[$i]));
 			// Checks if left tag fits object
-			if ($tag[$i][0] === $in['object'])
-			{ 	
-				$that_obj = false;
-				$i_obj = $i; $obj_check = $zeros;
-			}	
+			foreach ($in['object'] as $object)
+				if ($tag[$i][0] === $object)
+				{ 	
+					$that_obj = false;
+					$i_obj = $i; $obj_check = $zeros;
+					break;
+				}	
 				
 			// Check obj_cond, leap back on affirm
 			if ($that_obj === false)
@@ -735,21 +741,21 @@ class DFRawFunctions
 			}
 			else
 			{
-				foreach ($in['tag_cond'] as $c => $condition)
-				{
+				foreach ($in['tag_cond'] as $c => $condition) //## Add array filling
+				{ 
 					
 					if (in_array('order',$in['option'][$c]))
 					{
 						if (array_intersect_assoc($condition, $tag[$i]) === $condition)
 						{
-							$tmp[$obj_num][$i] = array_slice($tag[$i], count($condition));
+							$tmp[$obj_num][$c][] = array_values(array_slice($tag[$i], count($condition)));
 						} 
 					}
 					else
 					{
 						$difference=array_diff($tag[$i], $condition);
 						if (count($difference) != count($tag[$i]))
-							$tmp[$obj_num][$i] = $difference;
+							$tmp[$obj_num][$c][] = array_values($difference);
 					}
 				}
 				
@@ -785,26 +791,9 @@ class DFRawFunctions
 		//otherwise
 		if (!isset($i_obj)) return "<span class=\"error\">No ".$in['object']." is found.</span>";
 		if (!$tmp) return "<span class=\"error\">obj_cond is not met.</span>";
-		//echo '<br/>tmp='; print_r($tmp);
-		$i1=-1;
-		
+		echo '<br/>tmp='; print_r($tmp);
 		// Insert padding
-		//echo '<br/>padding='; print_r($in['padding']);
-		foreach ($tmp as &$obj)
-		{	
-			$obj = array_values($obj);
-			foreach ($obj as  &$obj_tag)
-			{	
-				$obj_tag = array_values($obj_tag);
-				$obj_tag = self::insertPadding($obj_tag, $in['padding'][0]);
-				echo 'obj_tag='. $obj_tag .'<br/>';
-			}
-			$obj = self::insertPadding($obj,$in['padding'][1]);
-			echo 'obj='. $obj .'<br/>';
-		}
-		$tmp = self::insertPadding($tmp,$in['padding'][2]);
-		unset ($obj, $obj_tag);
-		return $tmp;
+		return self::insertPadding($tmp,$in['padding']);
 	}
 	
 	
@@ -1314,30 +1303,48 @@ class DFRawFunctions
 		return $tile_color;
 	}
 	
-	// Inserts padding for $data string array, $padding is 2 and more elements array
+	
+	
+	// Inserts padding for $data (any dimensional array), $padding is array(array(...),...)
 	public static function insertPadding($data, $padding)
 	{
+		$depth = self::arrayDepth($data);
+		ksort(&$data);
+		if (!isset($padding[$depth-1]))
+			$padding[$depth-1] = array('','');
+			
 		$el_count = 1;
-		if (!is_array($data))
-			return '<span class="error">insertPadding: $data is not array.</span>';
-		$end = count($padding)-1;
-		
+		// echo '<br/>padding='. $padding[$depth-1];
+		$end = count($padding[$depth-1])-1;
 		foreach ($data as $i => &$piece)
-		{
+		{	
+			if ($depth >= 2) 
+				$piece = self::insertPadding($piece, $padding);
 			if ($i === 0)
-				$piece = $padding[0] . $piece;
+				$piece = $padding[$depth-1][0] . $piece;
 			if ($i === count($data)-1)
-				$piece = $piece . $padding[$end];
+				$piece = $piece . $padding[$depth-1][$end];
 			else 
 			{
 				if ($el_count < $end)
 				{
-				$piece = $piece . $padding[$el_count];
+				$piece = $piece . $padding[$depth-1][$el_count];
 				$el_count++;
 				}
 			}
 		}	
 		return implode($data);
+	}	
+	
+	// Finds array depth
+	public static function arrayDepth($array) 
+	{
+		if (is_array($array))
+		{
+			$array = self::arrayDepth($array[0]);
+			return $array+1;
+		}
+		return 0;
 	}
 	
 	// delimiters has to be an Array
@@ -1578,25 +1585,14 @@ class DFRawFunctions
 			
 			//*** Type: 
 			case 'type':
-			
-				if (isset($in['padding'][$i]))
-				{
-					$in['padding'] = explode('//',$in['padding']);
-					echo 'padding='; print_r($in['padding']);
-					for ($i=0; $i<=2; $i++)
-					{
-						if (!isset($in['padding'][$i]))
-						{
-							$in['padding'][$i]=array('&'); //##Add variants
-							
-						}
-						$in['padding'][$i] = explode('&',$in['padding'][$i]);
-					}
-				}
-				// echo 'padding='; print_r($in['padding']);
+				
+				if (isset($in['padding']))
+					$in['padding'] = self::multiexplode(array('//','&'),$in['padding']);
+				echo '<br/>padding='; print_r($in['padding']);
 					
 				if (!(isset($in['filename']) or isset($in['data'])) or !isset($in['object']))
 					return '<span class="error">Define df:type parameters (filename or data, object).</span>';
+				$in['object'] = explode(';',$in['object']);
 				
 				if (isset($in['obj_cond']))
 				$in['obj_cond'] = self::multiexplode(array(';',':'),$in['obj_cond']);
