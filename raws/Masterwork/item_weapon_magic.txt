@@ -13,7 +13,7 @@ German 2-handed sword. Longest two handed sword to ever exist.
 [MATERIAL_SIZE:15] 
 [ATTACK:EDGE:100000:11000:slash:slashes:forward edge:2500]
 [ATTACK:EDGE:100000:11000:slash:slashes:reverse edge:2500]
-[ATTACK:EDGE:100000:11000:sidestep and slash:sitesteps and slashes:forward edge:2500]
+[ATTACK:EDGE:100000:11000:sidestep and slash:sidesteps and slashes:forward edge:2500]
 [ATTACK:EDGE:100000:11000:sidestep and slash:sidesteps and slashes:reverse edge:2500]
 [ATTACK:EDGE:100000:11000:quickly slash:quickly slashes:partial edge:2500]
 [ATTACK:EDGE:100000:11000:make an undercut swing at:makes an undercut swing at:NO_SUB:2000]
