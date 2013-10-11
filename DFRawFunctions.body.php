@@ -695,14 +695,13 @@ class DFRawFunctions
 	public static function getType ($in)
 	{
 	
-		if (!isset($in['padding'])) $in['padding'] = '';
 		if (!isset($in['option'])) $in['option'] = array_fill(0,count($in['tag_cond']),array());;
 		if (!isset($in['obj_cond'])) $in['obj_cond'] = array(array($in['object']));
 		$zeros = 		array_fill(0,count($in['obj_cond']),0);
 		$ones = 		array_fill(0,count($in['obj_cond']),1);
 		$obj_check =	$zeros;
 		
-		echo $in['object'];
+		//echo $in['object'];
 		//$object = '', $requirement = '', $l_type = '', $number = '',  $description = ''
 	
 		$tag = self::getTags($in['data']);
@@ -716,7 +715,7 @@ class DFRawFunctions
 			// Checks if left tag fits object
 			if ($tag[$i][0] === $in['object'])
 			{ 	
-				$that_obj = false; 
+				$that_obj = false;
 				$i_obj = $i; $obj_check = $zeros;
 			}	
 				
@@ -731,13 +730,14 @@ class DFRawFunctions
 				{
 					$that_obj = true; 
 					$i=$i_obj; $obj_num++;
-					echo $obj_num;
+					// echo $obj_num;
 				}
 			}
 			else
 			{
 				foreach ($in['tag_cond'] as $c => $condition)
 				{
+					
 					if (in_array('order',$in['option'][$c]))
 					{
 						if (array_intersect_assoc($condition, $tag[$i]) === $condition)
@@ -752,6 +752,7 @@ class DFRawFunctions
 							$tmp[$obj_num][$i] = $difference;
 					}
 				}
+				
 			}
 			// Weird syntax, just extracts first value. 
 			// if ($FirstOnly === TRUE and $e !== 0){
@@ -786,33 +787,24 @@ class DFRawFunctions
 		if (!$tmp) return "<span class=\"error\">obj_cond is not met.</span>";
 		//echo '<br/>tmp='; print_r($tmp);
 		$i1=-1;
+		
+		// Insert padding
+		//echo '<br/>padding='; print_r($in['padding']);
 		foreach ($tmp as &$obj)
 		{	
-			$i1++;
-			$i2=-1;
+			$obj = array_values($obj);
 			foreach ($obj as  &$obj_tag)
 			{	
-				$i2++;
-				$i3=-1;
-				foreach ($obj_tag as &$one_tag)
-				{
-					$i3++;
-					echo ('  '. $i3 .'-'. (count($obj_tag)-1) .'  ');
-					if ($i3 === count($obj_tag)-1) break;
-					$one_tag = preg_replace('/(&)/', $one_tag, $in['padding'][0]);
-				}
-				$obj_tag = implode($obj_tag);
-				if ($i2 === count($obj)-1) break;
-				$obj_tag = preg_replace('/(&)/', $obj_tag, $in['padding'][1]);
+				$obj_tag = array_values($obj_tag);
+				$obj_tag = self::insertPadding($obj_tag, $in['padding'][0]);
+				echo 'obj_tag='. $obj_tag .'<br/>';
 			}
-			$obj = implode($obj);
-			if ($i1 === count($tmp)-1) break;
-			$obj = preg_replace('/(&)/', $obj, $in['padding'][2]);
-			
+			$obj = self::insertPadding($obj,$in['padding'][1]);
+			echo 'obj='. $obj .'<br/>';
 		}
-		unset ($obj, $obj_tag, $one_tag);
-		$out = implode($tmp);
-		return $out;
+		$tmp = self::insertPadding($tmp,$in['padding'][2]);
+		unset ($obj, $obj_tag);
+		return $tmp;
 	}
 	
 	
@@ -857,7 +849,7 @@ class DFRawFunctions
 	- if 2 parameters: 1st should be BUILDING_FURNACE, BUILDING_WORKSHOP or NAME :INVENTOR;:TAILOR;:Brewery;Inventor's Workbench;Gong
 	
 	*/
-	public static function getBuilding ($input = array())
+	public static function getBuilding ($input)
 	{
 		// $mtime = microtime(); $mtime = explode(" ",$mtime); $mtime = $mtime[1] + $mtime[0]; $starttime = $mtime; 
 		
@@ -1322,10 +1314,37 @@ class DFRawFunctions
 		return $tile_color;
 	}
 	
+	// Inserts padding for $data string array, $padding is 2 and more elements array
+	public static function insertPadding($data, $padding)
+	{
+		$el_count = 1;
+		if (!is_array($data))
+			return '<span class="error">insertPadding: $data is not array.</span>';
+		$end = count($padding)-1;
+		
+		foreach ($data as $i => &$piece)
+		{
+			if ($i === 0)
+				$piece = $padding[0] . $piece;
+			if ($i === count($data)-1)
+				$piece = $piece . $padding[$end];
+			else 
+			{
+				if ($el_count < $end)
+				{
+				$piece = $piece . $padding[$el_count];
+				$el_count++;
+				}
+			}
+		}	
+		return implode($data);
+	}
+	
 	// delimiters has to be an Array
 	// string has to be a String
 	public static function multiexplode ($delimiters,$string) 
-	{	$tmp = explode($delimiters[0],$string);
+	{	
+		$tmp = explode($delimiters[0],$string);
 		array_shift($delimiters);
 		if($delimiters != NULL)
 			foreach($tmp as $key => $val)
@@ -1561,12 +1580,20 @@ class DFRawFunctions
 			case 'type':
 			
 				if (isset($in['padding'][$i]))
+				{
 					$in['padding'] = explode('//',$in['padding']);
 					echo 'padding='; print_r($in['padding']);
-				for ($i=0; $i<=2; $i++)
-					if (!isset($in['padding'][$i]))
-						$in['padding'][$i]=' $1 ';
-				echo 'padding='; print_r($in['padding']);
+					for ($i=0; $i<=2; $i++)
+					{
+						if (!isset($in['padding'][$i]))
+						{
+							$in['padding'][$i]=array('&'); //##Add variants
+							
+						}
+						$in['padding'][$i] = explode('&',$in['padding'][$i]);
+					}
+				}
+				// echo 'padding='; print_r($in['padding']);
 					
 				if (!(isset($in['filename']) or isset($in['data'])) or !isset($in['object']))
 					return '<span class="error">Define df:type parameters (filename or data, object).</span>';

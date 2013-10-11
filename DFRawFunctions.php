@@ -54,10 +54,9 @@ function efDFRawFunctions_Initialize (&$parser)
 	$parser->setFunctionHook('mreplace',		'DFRawFunctions::mreplace');
 	$parser->setFunctionHook('delay',		'DFRawFunctions::delay');
 	$parser->setFunctionHook('eval',		'DFRawFunctions::evaluate');
-	$parser->setFunctionHook('df_type',		'DFRawFunctions::getType');
-	$parser->setFunctionHook('df_building',		'DFRawFunctions::getBuilding');
-	$parser->setFunctionHook('df_item',		'DFRawFunctions::getItem');
-	$parser->setFunctionHook('df_tile',		'DFRawFunctions::colorTile');
+	//$parser->setFunctionHook('df_building',		'DFRawFunctions::getBuilding');
+	//$parser->setFunctionHook('df_item',		'DFRawFunctions::getItem');
+	//$parser->setFunctionHook('df_tile',		'DFRawFunctions::colorTile');
 	$parser->setFunctionHook('df',		'DFRawFunctions::dfMain');
 	
 	
@@ -78,10 +77,9 @@ function efDFRawFunctions_RegisterMagicWords (&$magicWords, $langCode)
 	$magicWords['mreplace']			= array(0, 'mreplace');
 	$magicWords['delay']			= array(0, 'delay');
 	$magicWords['eval']				= array(0, 'eval');
-	$magicWords['df_type']			= array(0, 'df_type');
-	$magicWords['df_building']		= array(0, 'df_building');
-	$magicWords['df_item']			= array(0, 'df_item');
-	$magicWords['df_tile']			= array(0, 'df_tile');
+	//$magicWords['df_building']		= array(0, 'df_building');
+	//$magicWords['df_item']			= array(0, 'df_item');
+	//$magicWords['df_tile']			= array(0, 'df_tile');
 	$magicWords['df']		= array(0, 'df');
 	
 	return true;
