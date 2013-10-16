@@ -5,25 +5,27 @@ error_reporting(E_ALL);
 $wgStringInput = false;
 $wgNoWiki = false;
 $wgRawPath = array();
-$wgRaw = array(); $wgRawID = 0;
+$wgErrorPool = array('backtrace' => array(), 'log' => '');
 }
 
 class cMain {
 	
 	public static function dfMain (&$parser, $type = ''/*, ...*/)
 	{
+		
 		global $wgRawPath, $wgRawID, $wgRaw, $wgNoWiki;
 		$wgNoWiki = 0;
 		$output = '';
-		
-		if ($type === '') return '<span class="error">Df function has no telepathic abilities. Feed it gently with parameters of your choice.</span>';
-		
+				
 		// Format additional variables
 		for ($i = 2; $i <= func_num_args()-1; $i++)
 		{
 			$params[$i-2] = preg_replace("|\n|", '', func_get_arg($i));
 			$params[$i-2] = explode('=',$params[$i-2],2);
-			if (!(count($params[$i-2]) === 2)) return '<span class="error">Either "=" is missing or too much of them.</span>';
+			if (!(count($params[$i-2]) === 2)) {
+				return cMain::getError ('Either "=" is missing or too much of them');
+			}
+			
 			//if (in_array($params[$i-2][0],$valid_params))
 				$in[$params[$i-2][0]] = $params[$i-2][1];
 			//else
@@ -37,12 +39,12 @@ class cMain {
 		if (isset($in['nowiki']) and is_numeric($in['nowiki']))
 			$wgNoWiki = $in['nowiki'];
 		
-		// Load file
+		// Load file, define object
 		if (isset($in['filename']))	{
 			
 			global $wgDFRawEnableDisk;
 			if (!$wgDFRawEnableDisk === true) {
-				return '<span class="error">Loading files from disk is prohibited (check $wgDFRawEnableDisk in DFRawFunctions.php).</span>';
+				return cMain::getError ('Loading files from disk is prohibited (check $wgDFRawEnableDisk in DFRawFunctions.php)');
 			}
 				
 			$in['filename'] = str_replace(array('\\','/'), array('',':'), $in['filename']);
@@ -53,14 +55,16 @@ class cMain {
 			foreach ($in['filename'] as $filename) {
 				$wgRaw[$wgRawID] = new cRaw();
 				$loaded = $wgRaw[$wgRawID]->loadRaw($filename);
-				if ($loaded === false) {
+				if ($loaded !== true) {
 					unset($wgRaw[$wgRawID]);
 					continue;
 				}
-				//echo '<br/>'. $wgRawID. ': '; var_dump($wgRaw[$wgRawID]);
+				$wgRaw[$wgRawID]->getObject();
 				$wgRawID++;
 			}
 		}
+		
+		
 		
 		switch ($type)
 		{
@@ -73,83 +77,67 @@ class cMain {
 			
 			//*** Key: key
 			case 'key':
-				if (!isset($in['key'])) return '<span class="error">Define df:key parameter (key).</span>';
-				$output = self::keyTrans($in);
+				if (!isset($in['key'])) return cMain::getError ('Define df:key parameter (key)');
+				$output = cMain::keyTrans ($parser, $in);
 			break;
 			
-			//*** Load: filename (Just. Load. Raws.)
-			// case 'load':
-				// if (!isset($in['filename'])) return '<span class="error">Define df:load parameter (filename).</span>';
-				// $output = self::loadRaw($in['filename']);
-			// break;
-			
 			//*** Buiding: filename, building, option
-			// case 'building':
-				// if (!isset($in['filename'], $in['building'], $in['options']))
-					// return '<span class="error">Define df:building parameters (filename, building, option).</span>';
-				// $in['option'] = self::multiexplode(array(';',':'),$in['option']);
-				// $in['building'] = self::multiexplode(array(';',':'),$in['building']);
-				// $output = self::getBuilding($in);
-			// break;
+			/* case 'building':
+				if (!isset($in['filename'], $in['building'], $in['options']))
+					return '<span class="error">Define df:building parameters (filename, building, option).</span>';
+				$in['option'] = self::multiexplode(array(';',':'),$in['option']);
+				$in['building'] = self::multiexplode(array(';',':'),$in['building']);
+				$output = self::getBuilding($in);
+			break; */
 			
 			//*** Type: 
-			// case 'type':
-			
-				// if (isset($in['padding'][$i]))
-				// {
-					// $in['padding'] = explode('//',$in['padding']);
-					// echo 'padding='; print_r($in['padding']);
-					// for ($i=0; $i<=2; $i++)
-					// {
-						// if (!isset($in['padding'][$i]))
-						// {
-							// $in['padding'][$i]=array('&'); //##Add variants
+			case 'fetch':
+				
+				if (isset($in['padding'][$i]))
+				{
+					$in['padding'] = explode('//',$in['padding']);
+					//echo 'padding='; print_r($in['padding']);
+					for ($i=0; $i<=2; $i++)
+					{
+						if (!isset($in['padding'][$i]))
+						{
+							$in['padding'][$i]=array('&'); //##Add variants
 							
-						// }
-						// $in['padding'][$i] = explode('&',$in['padding'][$i]);
-					// }
-				// }
-				//echo 'padding='; print_r($in['padding']);
+						}
+						$in['padding'][$i] = explode('&',$in['padding'][$i]);
+					}
+					//echo  'padding='; print_r($in['padding']);
+				}
+				
 					
-				// if (!(isset($in['filename']) or isset($in['data'])) or !isset($in['object']))
-					// return '<span class="error">Define df:type parameters (filename or data, object).</span>';
+				if (!isset($in['filename']))
+					return cMain::getError ('Define df:type parameter (filename)');
 				
-				// if (isset($in['obj_cond']))
-				// $in['obj_cond'] = self::multiexplode(array(';',':'),$in['obj_cond']);
+				if (isset($in['obj_cond'])) {
+					$in['obj_cond'] = str_replace(array(',',';','/'), array(':'), $in['obj_cond']);
+					$in['obj_cond'] = cMain::multiexplode(array(':'),$in['obj_cond']);
+				}
 				
-				// if (isset($in['tag_cond']))
-					// $in['tag_cond'] = self::multiexplode(array(';',':'),$in['tag_cond']);
+				if (isset($in['tag_cond'])) {
+					$in['obj_cond'] = str_replace(array(',',';'), array(';'), $in['obj_cond']);
+					$in['tag_cond'] = cMain::multiexplode(array(';',':'),$in['tag_cond']);
+				}
+				//echo '<br/>'. $wgRaw. ': '; var_dump($wgRaw);
+				// echo '$in='; print_r($in);
+				foreach ($wgRaw as $Raw) {
+					$error = $Raw->getTags();
+					if ($error) return $error;
+				}
 				
-				// if (isset($in['filename'],$in['data']))
-					// return '<span class="error">Specify either "data" or "filename".</span>';
-					
-				// if (isset($in['filename']))
-				// {
-					// $in['data'] = self::loadRaw($in['filename']);
-					// unset ($in['filename']);
-				// }
-				
-				//echo '$in='; print_r($in); ////
-				
-				// if (isset($in['data']))
-					// $output = self::getType($in);
-			// break;
+				foreach ($wgRaw as $Raw)
+					$Raw->split_by_object();
+			break;
 			
-			//*** Test
-			// case 'test':
-				// $ob0 = self::dfTest($in['id']);
-				// $ob1 = self::dfTest($in['id']);
-				// $ob2 = self::dfTest($in['id']);
-				// $ob3 = self::dfTest($in['id']);
-				// $ob4 = $obj[5]->objectID;
-				// echo $ob0,$ob1,$ob2,$ob3,$ob4;
-			// break;
-			
-			
-			// default:
-				// return '<span class="error">Df function lacks required functionality. Choose supported type instead of "'. $type .'".</span>';
+			default:
+				return cMain::getError ('<span class="error">Df function lacks required functionality. Choose supported type instead of "'. $type .'".</span>');
 		}
 		
+		//echo '<br/>'. $wgRaw. ': '; var_dump($wgRaw);
 		if ($wgNoWiki>0)
 			return array($output, 'nowiki' => true );
 		return $output;
@@ -168,7 +156,7 @@ class cMain {
 	
 	// Makes "Alt+Ctrl+S" from "CUSTOM_SHIFT_ALT_CTRL_S".
 	// $input = array(string: key, replace, join)
-	public static function keyTrans ($input=array())
+	public static function keyTrans ($parser, $input=array())
 	{
 		if (!isset($input['replace'])) $input['replace']="$1";
 		if (!isset($input['join'])) $input['join']='-';
@@ -179,7 +167,7 @@ class cMain {
 		$invalid = array_diff($key, array("CUSTOM", "ALT", "SHIFT", "CTRL", "NONE"));
 		if ($invalid != FALSE){
 			$invalid = implode(', ', $invalid);
-			return "<span class=\"error\">Unrecognized keybinding values: $invalid</span>";
+			return cMain::getError ('Unrecognized keybinding values:'.  $invalid);
 		}
 		if (in_array("NONE", $key))
 			return '';
@@ -209,5 +197,19 @@ class cMain {
 	public static function evaluate (&$parser, $data = '')
 	{
 		return $parser->replaceVariables($data);
+	}
+	
+	// Error handling
+	public static function getError ($error) {
+		
+		if (isset($this))
+			$error .= "[ID = {$this->ID}]";
+		
+		trigger_error($error, E_USER_WARNING);
+		if (!is_string($error)) {
+			trigger_error('Error is not string', E_USER_WARNING);
+			break;
+		}
+		return '<span class="error">Error</span>';
 	}
 }
