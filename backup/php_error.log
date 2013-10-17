@@ -1,1 +1,2 @@
 [04-Oct-2013 12:55:18] PHP Parse error:  syntax error, unexpected T_LOGICAL_OR, expecting ',' or ')' in X:\home\aswik\www\extensions\DFRawFunctions-master\DFRawFunctions.body.php on line 1486
+[16-Oct-2013 11:12:51] PHP Parse error:  syntax error, unexpected T_VARIABLE in X:\home\aswik\www\extensions\DFRawFunctions-master\backup\test.php on line 3

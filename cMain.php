@@ -1,50 +1,27 @@
 <?php
+// Globals
 {
 ini_set('display_errors', 'On');
 error_reporting(E_ALL);
-$wgStringInput = false;
-$wgNoWiki = false;
-$wgRawPath = array();
-$wgErrorPool = array('backtrace' => array(), 'log' => '');
 }
 
 class cMain {
 	
-	public static function dfMain (&$parser, $type = ''/*, ...*/)
+	public static function dfMain (&$parser, $type = '', $filename = '', $object = '')
 	{
-		
-		global $wgRawPath, $wgRawID, $wgRaw, $wgNoWiki;
+		global $wgRawPath, $wgRawID, $wgRaw, $wgNoWiki, $wgError
+		if (!isset($wgRawID))
+			$wgRawID = 1;
 		$wgNoWiki = 0;
 		$output = '';
-				
-		// Format additional variables
-		for ($i = 2; $i <= func_num_args()-1; $i++)
-		{
-			$params[$i-2] = preg_replace("|\n|", '', func_get_arg($i));
-			$params[$i-2] = explode('=',$params[$i-2],2);
-			if (!(count($params[$i-2]) === 2)) {
-				return cMain::getError ('Either "=" is missing or too much of them');
-			}
-			
-			//if (in_array($params[$i-2][0],$valid_params))
-				$in[$params[$i-2][0]] = $params[$i-2][1];
-			//else
-				//return '<span class="error">Parameter "'. $params[$i-2][0] .'" is invalid.</span>';
-		}
-		
-		// option
-		//if (isset($in['option']))
-		//	$in['option'] = explode(',',preg_replace("| |", '', $in['option']));
-			
-		if (isset($in['nowiki']) and is_numeric($in['nowiki']))
-			$wgNoWiki = $in['nowiki'];
 		
 		// Load file, define object
+		if !
 		if (isset($in['filename']))	{
 			
 			global $wgDFRawEnableDisk;
 			if (!$wgDFRawEnableDisk === true) {
-				return cMain::getError ('Loading files from disk is prohibited (check $wgDFRawEnableDisk in DFRawFunctions.php)');
+				return cMain::getError (__CLASS__,__FUNCTION__,'Loading files from disk is prohibited (check $wgDFRawEnableDisk in DFRawFunctions.php)');
 			}
 				
 			$in['filename'] = str_replace(array('\\','/'), array('',':'), $in['filename']);
@@ -53,14 +30,11 @@ class cMain {
 			if ($error) return $error;
 			
 			foreach ($in['filename'] as $filename) {
-				$wgRaw[$wgRawID] = new cRaw();
-				$loaded = $wgRaw[$wgRawID]->loadRaw($filename);
-				if ($loaded !== true) {
-					unset($wgRaw[$wgRawID]);
+				if (cRaw::loaded_raw_check ('filename', $filename))
 					continue;
-				}
-				$wgRaw[$wgRawID]->getObject();
-				$wgRawID++;
+				$ID = $wgRawID;
+				$wgRaw[$ID] = new cRaw($filename);
+				$wgRaw[$ID]->getObject();
 			}
 		}
 		
@@ -122,25 +96,30 @@ class cMain {
 					$in['obj_cond'] = str_replace(array(',',';'), array(';'), $in['obj_cond']);
 					$in['tag_cond'] = cMain::multiexplode(array(';',':'),$in['tag_cond']);
 				}
-				//echo '<br/>'. $wgRaw. ': '; var_dump($wgRaw);
+				
 				// echo '$in='; print_r($in);
-				foreach ($wgRaw as $Raw) {
-					$error = $Raw->getTags();
+				
+				foreach ($wgRaw as $raw) {
+				    if ($raw->tag === false)
+						$error = $raw->getTags();
 					if ($error) return $error;
 				}
-				
-				foreach ($wgRaw as $Raw)
-					$Raw->split_by_object();
+				foreach ($wgRaw as $raw)
+					$raw->split_by_object();
+				//echo '<br/>'. $wgRaw. ': '; print_r($wgRaw);
 			break;
 			
 			default:
 				return cMain::getError ('<span class="error">Df function lacks required functionality. Choose supported type instead of "'. $type .'".</span>');
 		}
 		
-		//echo '<br/>'. $wgRaw. ': '; var_dump($wgRaw);
-		if ($wgNoWiki>0)
-			return array($output, 'nowiki' => true );
-		return $output;
+		return (cMain::varSpam());
+		//echo '<br/>'. $wgRaw. ': '; print_r($wgRaw[5]);
+		
+		
+		//if ($wgNoWiki>0)
+			//return array($output, 'nowiki' => true );
+		//return $output;
 		
 	}
 	
@@ -201,15 +180,47 @@ class cMain {
 	
 	// Error handling
 	public static function getError ($error) {
-		
-		if (isset($this))
-			$error .= "[ID = {$this->ID}]";
-		
-		trigger_error($error, E_USER_WARNING);
+		global $wgError;
 		if (!is_string($error)) {
-			trigger_error('Error is not string', E_USER_WARNING);
+			cMain::getError('Error is not string', E_USER_WARNING);
 			break;
 		}
-		return '<span class="error">Error</span>';
+		
+		//if (isset($this))
+			//var_dump($this);
+		
+		trigger_error($error, E_USER_WARNING);
+		$wgError .= '<span class="error">Error</span>';
+	}
+	
+	public static function varSpam () {
+		global $wgRaw; 
+		$spam = '';
+		foreach ($wgRaw as $raw) {
+			$spam .= '<br/>';
+			$raw = get_object_vars($raw);
+			foreach ($raw as $key => $property) {
+				if (!$property)
+					continue;
+				switch ($key) {
+				
+				case 'text':
+					$property = 'lots of text';
+				break;
+				case 'obj': 
+				case 'split_to':
+					if (is_array($property))
+						$property = implode(':',$property);	
+				break;
+				case 'ID':
+				case 'split_from':
+				break;
+				default:
+					continue (2);
+				}
+				$spam .= '<br/>'. $key .'='. $property;
+			}
+		}
+		return $spam;
 	}
 }

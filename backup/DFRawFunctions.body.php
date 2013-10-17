@@ -9,52 +9,7 @@ $wgRawPath = array();
 class DFRawFunctions
 {
 	
-   /**
-	*	Takes some raws and returns a 2-dimensional token array
-	*   If 2nd parameter is specified, then only tags of the specified type will be returned
-	*   Optional 3rd parameter allows specifying an array 
-	*   which will be filled with indentation for each line
-	*	
-	*	Input: {{df_raw:data|type|padding}}
-	*	- data: string, raws
-	*  	- type: tag is returned only if first subtag = type
-	*	- 
-	*	
-	*		
-	*		
-	*  	
-	*  
-	*  
-	**/
-	private static function getTags ($data, $type = '', &$padding = array())
-	{
-		
-		$raws = array();
-		$off = 0;
-		$pad = '';
-		while (1)
-		{
-			$start = strpos($data, '[', $off);
-			if ($start === FALSE)
-				break;
-			$end = strpos($data, ']', $start);
-			if ($end === FALSE)
-				break;
-			if ($off < $start)
-			{
-				$tmp = explode("\n", trim(substr($data, $off, $start - $off), "\r\n"));
-				$pad = end($tmp);
-			}
-			$tag = explode(':', substr($data, $start + 1, $end - $start - 1));
-			if (($type == '') || ($tag[0] == $type))
-			{
-				$padding[] = $pad;
-				$raws[] = $tag;
-			}
-			$off = $end + 1;
-		}
-		return $raws;
-	}
+   
 	
    /** 
 	*	Input:
@@ -64,7 +19,6 @@ class DFRawFunctions
 	*	- some random raws
 	*   Checks if specified strings are valid namespace:filename
 	*  	If it is, then load and return its contents; otherwise, return input data
-	*   Option FIX! fixes masterwork raws, not required if Masterwork namespace is mentioned
     **/
 	private static function loadFile ($data, $options='')
 	{
@@ -107,82 +61,6 @@ class DFRawFunctions
 			$output=self::masterworkRawFix($output);
 		
 		return $output;
-	}
-
-	/** 
-	*	Same as loadFile, but works only with arrays
-    **/
-	private static function loadRaw ($input)
-	{	
-		// Check if reading from disk is enabled
-		global $wgDFRawEnableDisk;
-		if (!$wgDFRawEnableDisk)
-			return '<span class="error">Reading from disk is prohibited.</span>';
-		
-		// Check if path exists
-		global $wgDFRawPath;
-		if (!is_dir($wgDFRawPath))
-			return '<span class="error">Wrong path to file (check $wgDFRawPath in DFRawFunctions.php).</span>';
-		
-		// Access filename
-		global $wgRawPath;
-		$filenames=$wgRawPath;
-		
-		// Balance partial input and load file
-		$output='';
-		foreach ($filenames as $i=>&$filename)
-		{	
-		
-			if ($i=0 and count($filename) != 2)
-				return '<span class="error">Specify file folder.</span>';
-				
-			if (count($filename)===2) $filename_count=$i;
-			if (count($filename) != 2)
-			{
-				$filename[1]=$filename[0];
-				$filename[0]=$filenames[$filename_count][0];
-			}
-			$wantfile[$i] = $wgDFRawPath .'/'. $filename[0] .'/'. $filename[1] .'.txt';
-			
-			if (!is_file($wantfile[$i]))
-				return '<span class="error">Requested file is missing: "'.  $filename[0] .'/'. $filename[1] .'".</span>';
-				
-			$file=file_get_contents($wantfile[$i]);
-			if ($filename[0]='Masterwork')
-				$output.=self::masterworkRawFix($file);
-			else
-				$output.=$file;
-		}
-		
-		return $output;
-	}
-	
-	// Fix corrupted masterwork raws
-	public static function masterworkRawFix($string)
-	{
-		$start=0;
-		$words=array();
-		$i=0;
-		while(true)
-		{
-			$start = strpos($string,'!NO',$start);
-			$end = strpos($string, '!', $start+1);
-			
-			if ($start === FALSE or $end === FALSE or $end-$start > 30)
-				break;
-			$words['corrupted'][] = substr($string,$start,$end-$start+1);
-			
-			$start=$end;
-		}
-		if($start)
-		{
-			foreach ($words['corrupted'] as $word)
-				$words['fixed']="YES".substr($word,3,-1).'[';
-		
-			$string=str_replace($words['corrupted'], $words['fixed'], $string);
-		}
-		return $string;
-	}
 	
 	// Take an entire raw file and extract one entity
 	// If 'object' is not specified, returns the entire file
@@ -692,11 +570,11 @@ class DFRawFunctions
 	*/
 	
 	// {{#df:type|object=BUILDING_WORKSHOP|filename=building_masterwork|obj_req=BUILDING_WORKSHOP:CHANDLER|tag_req=BUILD_LABOR}}
-	public static function getType ($in)
-	{
-	
-		if (!isset($in['option'])) $in['option'] = array_fill(0,count($in['tag_cond']),array());;
-		if (!isset($in['obj_cond'])) $in['obj_cond'] = array(array($in['object']));
+	public static function getType ($in) {
+		
+		global $wgRaw;
+		//if (!isset($in['option'])) 
+			//$in['option'] = array_fill(0,count($in['tag_cond']),array());
 		$zeros = 		array_fill(0,count($in['obj_cond']),0);
 		$ones = 		array_fill(0,count($in['obj_cond']),1);
 		$obj_check =	$zeros;

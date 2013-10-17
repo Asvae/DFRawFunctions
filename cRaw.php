@@ -1,26 +1,41 @@
 <?php
 
 $wgRaw = array(); 
-$wgRawID = 0;
+
 
 class cRaw
 {	
+	public $split_to;
+	public $split_from;
 	public $ID;
 	public $obj;
 	public $filename;
 	public $text;
 	public $tag;
 	
-	
-	public function __construct () {
+	public function __construct ($filename) {
+		
 		global $wgRawID;
+		global $wgRaw;
+		$this->filename = $filename;
+		
+		// load "txt"
+		$loaded = $this->loadRaw($filename);
+			if ($loaded !== true)
+				cMain::getError ('construct: can\'t load raws from file');
+		
+		// 'falsify' any other public property
 		$this->obj = false;
-		$this->filename = false;
-		$this->text = false;
 		$this->tag = false;
+		$this->split_to = array();
+		$this->split_from = false;
+		
+		// get ID from global
 		$this->ID = $wgRawID;
+		$wgRawID++;
 	}
 	
+	// Make filename array readable by loadRaw and perform checks
 	public static function balanceFilenames(&$filenames = array()) {
 		// Check if path exists
 		global $wgDFRawPath;
@@ -45,10 +60,11 @@ class cRaw
 		}
 	}
 	
+	// Load "text" from "filename" array in cRaw instance
 	public function loadRaw ($filename = array()) {	
 		
 		global $wgDFRawPath, $wgRaw;
-		foreach ($wgRaw as $raw)
+		if ($wgRaw) foreach ($wgRaw as $raw)
 			if ($raw->filename === $filename and !isset($raw->obj))
 				return cMain::getError ('loadRaw: cRaw instance text is already defined');
 		$wantfile = $wgDFRawPath .'/'. $filename[0] .'/'. $filename[1] .'.txt';
@@ -61,7 +77,7 @@ class cRaw
 		return true;
 	}
 	
-	// Fix corrupted masterwork raws
+	// Fix corrupted masterwork raws ('!NOFOO!'->'YESFOO[')
 	public function masterworkRawFix(&$string) {
 	
 		$start = 0;
@@ -88,11 +104,13 @@ class cRaw
 		}
 	}
 	
-	// Searches for object in text of cRaw instance
+	// Search for object in "text" of cRaw instance
 	public function getObject () {
 	
-		if ($this->text === false)
+		if ($this->text === false){
+			print_r($this);
 			return cMain::getError ('getObject: "text" property is not defined');
+			}
 		$start = strpos($this->text, '[OBJECT:') + 8;
 		$end = strpos($this->text, ']', $start + 1);
 		if (!isset($start, $end))
@@ -101,17 +119,13 @@ class cRaw
 			return true;
 			
 	}
+	 
+	// make "tag" array from "text" string in cRaw instance
+	public function getTags () {
 	
-	/*
-	* creates "tag" property from "text" in cRaw instance
-	*/
-	public function getTags ()
-	{
 		if ($this->tag !== false)
-		{	
-		//print_r($this->tag);
 			return cMain::getError ("getTags: \"tag\" property of cRaw instance is already defined");
-		}
+		
 		if ($this->text === false)
 			return cMain::getError ('getTags: "text" property of cRaw instance is missing');
 		
@@ -138,12 +152,15 @@ class cRaw
 		return false;
 	}
 	
+	// splits object (if "tag" and "obj" are present) into 
+	// smaller objects (different "tag", "obj", "ID"; same "filename")
 	public function split_by_object () {
-	
+		if ($this->split_to or $this->split_from)
+			return true;
 		if ($this->obj === false)
-			return cMain::getError ('getTags: "obj" property of cRaw instance is missing');
+			return cMain::getError ('split_by_object: "obj" property of cRaw instance is missing');
 		if ($this->tag === false)
-			return cMain::getError ('getTags: "tag" property of cRaw instance is missing');
+			return cMain::getError ('split_by_object: "tag" property of cRaw instance is missing');
 			
 		$object = cRaw::objectCheck($this->obj);
 		
@@ -151,21 +168,23 @@ class cRaw
 		global $wgRawID;
 		$object_present = false;
 		foreach  ($this->tag as $tag) {
-			foreach ($object as $object_variance)
-				$is_object = ($tag[0] === $object_variance);
+		
+			$is_object = in_array($tag[0], $object);
 
-			if ($is_object and $object_present === false)
+			if ($is_object and $object_present === false) {
 				$object_present = true;
-			if ($is_object and $object_present === true){
-				$wgRaw[$wgRawID] = new cRaw();
-				$wgRaw[$wgRawID]->obj = $tag;
-				$wgRaw[$wgRawID]->filename = $this->filename;
-				$wgRaw[$wgRawID]->tag = array();
-				$wgRawID++;
+			}
+			if ($is_object and $object_present === true) {
+				$ID = $wgRawID;
+				$wgRaw[$ID] = new cRaw($this->filename);
+				$wgRaw[$ID]->obj = $tag;
+				$wgRaw[$ID]->tag = array();
+				$wgRaw[$ID]->split_from = $this->ID;
+				$this->split_to[] = $ID;
 				
 			}
 			if (!$is_object and $object_present === true)
-			$wgRaw[$wgRawID - 1]->tag[] = $tag;
+			$wgRaw[$ID]->tag[] = $tag;
 		}
 		return true;
 	
@@ -194,4 +213,14 @@ class cRaw
 		return $compare;
 	}
 	
+	// returns ID if cRaw with property/value is present
+	public static function loaded_raw_check ($property, $value) {
+		if (!isset($property, $value))
+			return cMain::getError ('loaded_raw_check: define property and value');
+		global $wgRaw;
+		if ($wgRaw) foreach ($wgRaw as $raw)
+			if (!isset($raw->$property) and $raw->$property === $value)
+				return $raw->ID;
+		return false;
+	}
 }
