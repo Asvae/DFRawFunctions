@@ -7,16 +7,15 @@ error_reporting(E_ALL);
 
 class cMain {
 	
-	public static function dfMain (&$parser, $type = '', $filename = '', $object = '')
-	{
-		global $wgRawPath, $wgRawID, $wgRaw, $wgNoWiki, $wgError
+	public static function dfMain (&$parser, $type = '', $filename = '', $object = '') {
+		cMain::getError (__CLASS__ . __FUNCTION__ .'example error');
+		global $wgRawPath, $wgRawID, $wgRaw, $wgNoWiki, $wgError;
 		if (!isset($wgRawID))
 			$wgRawID = 1;
 		$wgNoWiki = 0;
 		$output = '';
 		
 		// Load file, define object
-		if !
 		if (isset($in['filename']))	{
 			
 			global $wgDFRawEnableDisk;
@@ -190,7 +189,7 @@ class cMain {
 			//var_dump($this);
 		
 		trigger_error($error, E_USER_WARNING);
-		$wgError .= '<span class="error">Error</span>';
+		$wgError .= '<br/><span class="error">Error</span>';
 	}
 	
 	public static function varSpam () {
